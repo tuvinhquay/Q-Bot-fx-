@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: q-bot-fx-telegram
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm run start
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
