@@ -27,6 +27,7 @@ class Settings:
         self.SYMBOLS = ["EURUSD"]
         self.TIMEFRAME_H4 = "H4"
         self.TIMEFRAME_D1 = "D1"
+        self.TRADE_INTERVAL_MINUTES = 5
 
     @staticmethod
     def _get_required(name: str) -> str:
