@@ -20,6 +20,8 @@ class Settings:
         self.MT5_LOGIN = self._get_required("MT5_LOGIN")
         self.MT5_PASSWORD = self._get_required("MT5_PASSWORD")
         self.MT5_SERVER = self._get_required("MT5_SERVER")
+        self.TELEGRAM_BOT_TOKEN = self._get_required("TELEGRAM_BOT_TOKEN")
+        self.TELEGRAM_CHAT_ID = self._get_required("TELEGRAM_CHAT_ID")
 
         self.RISK_PERCENT = 1
         self.SYMBOLS = ["EURUSD"]
