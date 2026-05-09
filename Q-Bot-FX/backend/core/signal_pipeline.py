@@ -19,10 +19,12 @@ LOGGER = logging.getLogger(__name__)
 def run_signal_pipeline(settings: Settings) -> None:
     connector = MT5Connector(settings)
     connected = connector.connect()
-    LOGGER.info("MT5 connected: %s", "OK" if connected else "WARNING")
     if not connected:
-        LOGGER.warning("MT5 connection failed, stopping pipeline.")
-        return
+        LOGGER.error("MT5 init failed")
+        raise RuntimeError("MT5 connection failed")
+
+    print("🔌 MT5 connected")
+    LOGGER.info("MT5 connected: OK")
 
     candles = get_latest_market_data(connector)
     LOGGER.info("Fetched candles: %s", len(candles))
