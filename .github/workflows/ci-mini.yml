@@ -27,3 +27,22 @@ jobs:
       - name: Chạy CI Mini tests
         run: |
           python -m pytest Q-Bot-FX
+
+
+      - name: Notify Telegram Success
+        if: success()
+        run: |
+          pip install requests
+          python monitoring/ci_notifier.py success
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+      - name: Notify Telegram Failure
+        if: failure()
+        run: |
+          pip install requests
+          python monitoring/ci_notifier.py fail
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}

@@ -75,3 +75,12 @@ Mỗi lần Push hoặc tạo Pull Request:
 - Nếu test fail → không cho merge
 
 Điều này giúp phát triển bằng prompt an toàn.
+
+## 🚨 CI Mini Alerts
+
+Mỗi lần push hoặc tạo Pull Request:
+
+• Tests PASS → Telegram gửi thông báo hệ thống ổn định  
+• Tests FAIL → Telegram gửi cảnh báo ngay lập tức  
+
+Giúp phát hiện lỗi sớm trước khi merge.
