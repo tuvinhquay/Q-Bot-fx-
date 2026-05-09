@@ -35,3 +35,60 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 ```
 
+
+## 🧠 CI Mini monitoring
+
+CI Mini nằm trong thư mục `ci-mini/` và chạy health check cho:
+
+- Bot Telegram: `http://localhost:3000/health`
+- Backend API: `http://localhost:3000/api/health`
+- Python Trading Engine: `http://localhost:8000/health`
+- Trading smoke test: `POST http://localhost:8000/test-trade`
+
+Chạy thủ công:
+
+```bash
+cd ci-mini && python3 ci_runner.py
+```
+
+Cron mỗi 5 phút trên server Linux:
+
+```cron
+*/5 * * * * cd /root/Q-Bot-FX/ci-mini && python3 ci_runner.py
+```
+
+Để gửi báo cáo Telegram, đặt `TELEGRAM_BOT_TOKEN` và `TELEGRAM_CHAT_ID` hoặc cặp biến riêng `CI_MINI_TELEGRAM_TOKEN` và `CI_MINI_TELEGRAM_CHAT_ID`.
+
+Python Trading Engine health API có thể chạy bằng:
+
+```bash
+cd Q-Bot-FX && uvicorn backend.health_api:app --host 0.0.0.0 --port 8000
+```
+
+## 🤖 CI MINI (Automatic Testing)
+
+Dự án sử dụng GitHub Actions để tự động chạy test.
+
+Mỗi lần Push hoặc tạo Pull Request:
+- GitHub sẽ cài Python
+- Tự chạy pytest
+- Nếu test fail → không cho merge
+
+Điều này giúp phát triển bằng prompt an toàn.
+
+## 🚨 CI Mini Alerts
+
+Mỗi lần push hoặc tạo Pull Request:
+
+• Tests PASS → Telegram gửi thông báo hệ thống ổn định  
+• Tests FAIL → Telegram gửi cảnh báo ngay lập tức  
+
+Giúp phát hiện lỗi sớm trước khi merge.
+
+## Risk Management System
+- 1% risk per trade
+- Max 3 open trades
+- 5% daily drawdown guard
+
+## Weekend Trading Protection
+Bot tự động dừng giao dịch vào Thứ 7 & Chủ nhật để tránh lỗi MT5.
