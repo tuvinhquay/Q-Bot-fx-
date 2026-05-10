@@ -1,66 +1,126 @@
 # Q-Bot-fx-
-"Ứng dụng công nghệ tài chính"
+Ứng dụng công nghệ tài chính – Trading Bot + AI + Dashboard
 
-## 🔥 FIRST LIVE RUN
+======================================================
+🔥 FIRST LIVE RUN
+======================================================
+
+Bước khởi tạo hệ thống
 
 1. Tạo Firebase project
-2. Tạo service account và copy thông tin vào môi trường
-3. Lấy Firebase web config từ phần Project settings
-4. Lấy Gemini API key
-5. Tạo file `.env` tại root với nội dung dựa trên `.env.example`
-6. Chạy toàn bộ hệ thống bằng:
+2. Tạo Service Account → copy credentials vào ENV
+3. Lấy Firebase Web Config trong Project Settings
+4. Lấy Gemini API Key
+5. Tạo file .env tại root theo .env.example
+6. Chạy toàn bộ hệ thống:
 
-```bash
 powershell ./run-local.ps1
-```
 
-### Root env variables
 
-`GEMINI_API_KEY`, `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`, `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`, `NEXT_PUBLIC_FIREBASE_APP_ID`
+======================================================
+🌍 ROOT ENV VARIABLES
+======================================================
 
-### Local env file
+GEMINI_API_KEY
+FIREBASE_PROJECT_ID
+FIREBASE_CLIENT_EMAIL
+FIREBASE_PRIVATE_KEY
+NEXT_PUBLIC_FIREBASE_API_KEY
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+NEXT_PUBLIC_FIREBASE_PROJECT_ID
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+NEXT_PUBLIC_FIREBASE_APP_ID
 
-Tạo file `.env` hoặc `.env.local` ở root với giá trị tương ứng. Ví dụ:
 
-```env
+======================================================
+📄 VÍ DỤ FILE .ENV
+======================================================
+
 GEMINI_API_KEY=your_gemini_api_key
 FIREBASE_PROJECT_ID=your_project_id
 FIREBASE_CLIENT_EMAIL=your_client_email
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+
 NEXT_PUBLIC_FIREBASE_API_KEY=your_web_api_key
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
-```
 
 
-## 🧠 CI Mini monitoring
+======================================================
+🤖 CI MINI – AUTOMATIC TESTING (GitHub Actions)
+======================================================
 
-CI Mini nằm trong thư mục `ci-mini/` và chạy health check cho:
+Mỗi lần Push hoặc tạo Pull Request:
 
-- Bot Telegram: `http://localhost:3000/health`
-- Backend API: `http://localhost:3000/api/health`
-- Python Trading Engine: `http://localhost:8000/health`
-- Trading smoke test: `POST http://localhost:8000/test-trade`
+• GitHub cài Python 3.11  
+• Tự động chạy pytest  
+• Nếu test FAIL → không cho merge  
+
+➡️ Giúp phát triển bằng prompt an toàn.
+
+
+======================================================
+🧠 CI MINI – HEALTH MONITORING
+======================================================
+
+CI Mini nằm trong thư mục ci-mini/ và chạy health check cho:
+
+Telegram Bot → http://localhost:3000/health  
+Backend API → http://localhost:3000/api/health  
+Python Trading Engine → http://localhost:8000/health  
+Trading smoke test → POST http://localhost:8000/test-trade  
 
 Chạy thủ công:
 
-```bash
-cd ci-mini && python3 ci_runner.py
-```
+cd ci-mini
+python3 ci_runner.py
 
-Cron mỗi 5 phút trên server Linux:
+Cron server Linux (mỗi 5 phút):
 
-```cron
 */5 * * * * cd /root/Q-Bot-FX/ci-mini && python3 ci_runner.py
-```
 
-Để gửi báo cáo Telegram, đặt `TELEGRAM_BOT_TOKEN` và `TELEGRAM_CHAT_ID` hoặc cặp biến riêng `CI_MINI_TELEGRAM_TOKEN` và `CI_MINI_TELEGRAM_CHAT_ID`.
 
-Python Trading Engine health API có thể chạy bằng:
+======================================================
+🚨 CI MINI TELEGRAM ALERTS
+======================================================
 
-```bash
-cd Q-Bot-FX && uvicorn backend.health_api:app --host 0.0.0.0 --port 8000
-```
+Mỗi lần Push hoặc tạo Pull Request:
+
+✅ Tests PASS → Telegram báo hệ thống ổn định  
+❌ Tests FAIL → Telegram cảnh báo ngay  
+
+ENV cần thiết:
+
+TELEGRAM_BOT_TOKEN
+TELEGRAM_CHAT_ID
+
+Hoặc:
+
+CI_MINI_TELEGRAM_TOKEN
+CI_MINI_TELEGRAM_CHAT_ID
+
+
+======================================================
+🐍 PYTHON TRADING ENGINE HEALTH API
+======================================================
+
+cd Q-Bot-FX
+uvicorn backend.health_api:app --host 0.0.0.0 --port 8000
+
+
+======================================================
+🚀 DEVELOPMENT WORKFLOW CHUẨN
+======================================================
+
+1️⃣ Viết Prompt  
+2️⃣ Codex tạo branch  
+3️⃣ Tạo Pull Request  
+4️⃣ CI Mini chạy test tự động  
+5️⃣ Merge vào main nếu PASS  
+6️⃣ Pull về máy → test local  
+
+➡️ Lặp lại cho đến khi hoàn thành hệ thống.
