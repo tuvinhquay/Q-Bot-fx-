@@ -1,0 +1,22 @@
+{
+  "services": {
+    "telegram_bot": {
+      "name": "Bot Telegram",
+      "health_url": "http://localhost:3000/health"
+    },
+    "backend_api": {
+      "name": "Backend API",
+      "health_url": "http://localhost:3000/api/health"
+    },
+    "python_engine": {
+      "name": "Python Trading Engine",
+      "health_url": "http://localhost:8000/health"
+    }
+  },
+  "tests": {
+    "trade_simulation": {
+      "name": "Trading Simulation",
+      "url": "http://localhost:8000/test-trade"
+    }
+  }
+}
