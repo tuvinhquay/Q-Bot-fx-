@@ -29,3 +29,18 @@ cd /root/Q-Bot-FX/ci-mini && python3 ci_runner.py
 ```cron
 */5 * * * * cd /root/Q-Bot-FX/ci-mini && python3 ci_runner.py
 ```
+<<<<<<< HEAD
+=======
+
+
+## Level 1.5 report
+
+`ci_runner.py` hiện gửi báo cáo chi tiết theo từng service:
+
+- Backend API
+- Trading API
+- Telegram credentials
+- Smoke Trade
+
+Kết quả cuối báo `SYSTEM STATUS: HEALTHY` nếu tất cả OK hoặc `SYSTEM STATUS: ERROR` nếu có service FAIL.
+>>>>>>> origin/codex/setup-ci-mini-for-automatic-testing

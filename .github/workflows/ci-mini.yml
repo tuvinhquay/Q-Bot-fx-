@@ -22,7 +22,11 @@ jobs:
       - name: Cài thư viện cần thiết
         run: |
           python -m pip install --upgrade pip
+<<<<<<< HEAD
           pip install pytest pytest-asyncio
+=======
+          pip install pytest pytest-asyncio requests
+>>>>>>> origin/codex/setup-ci-mini-for-automatic-testing
 
       - name: Chạy CI Mini tests
         run: |
