@@ -70,6 +70,13 @@ class TradeExecutor:
         positions = mt5.positions_get(symbol=symbol)
         return bool(positions)
 
+    def count_open_positions(self) -> int:
+        """Return the total number of currently open MT5 positions."""
+        positions = mt5.positions_get()
+        if positions is None:
+            return 0
+        return len(positions)
+
     @staticmethod
     def _get_order_type(signal: str) -> int | None:
         if signal == "BUY":
