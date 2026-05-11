@@ -1,7 +1,8 @@
-"""Tests for CI Mini Level 1.5 detailed reports."""
+"""Tests for the local CI Mini runner."""
 
 from __future__ import annotations
 
+import subprocess
 import sys
 from pathlib import Path
 
@@ -10,45 +11,45 @@ CI_MINI_DIR = REPO_ROOT / "ci-mini"
 if str(CI_MINI_DIR) not in sys.path:
     sys.path.insert(0, str(CI_MINI_DIR))
 
-from ci_runner import build_report
-from service_checker import check_telegram
+import ci_runner
 
 
-def test_build_report_healthy() -> None:
-    report = build_report(
-        {
-            "backend_api": True,
-            "trading_api": True,
-            "telegram": True,
-            "smoke_trade": True,
-        }
-    )
+def test_run_tests_returns_true_on_success(monkeypatch, capsys) -> None:
+    """run_tests should execute pytest and return True for a zero exit code."""
 
-    assert "Backend API: OK" in report
-    assert "Trading API: OK" in report
-    assert "Telegram: OK" in report
-    assert "Smoke Trade: OK" in report
-    assert "SYSTEM STATUS: HEALTHY" in report
+    def fake_run(command, capture_output, text):
+        assert command == ["python", "-m", "pytest", "Q-Bot-FX"]
+        assert capture_output is True
+        assert text is True
+        return subprocess.CompletedProcess(command, 0, stdout="passed", stderr="")
+
+    monkeypatch.setattr(ci_runner.subprocess, "run", fake_run)
+
+    assert ci_runner.run_tests() is True
+    assert "🚀 Running CI MINI tests..." in capsys.readouterr().out
 
 
-def test_build_report_error() -> None:
-    report = build_report(
-        {
-            "backend_api": True,
-            "trading_api": False,
-            "telegram": True,
-            "smoke_trade": False,
-        }
-    )
+def test_run_tests_returns_false_on_failure(monkeypatch) -> None:
+    """run_tests should return False when pytest exits non-zero."""
 
-    assert "Backend API: OK" in report
-    assert "Trading API: FAIL" in report
-    assert "Smoke Trade: FAIL" in report
-    assert "SYSTEM STATUS: ERROR" in report
+    def fake_run(command, capture_output, text):
+        return subprocess.CompletedProcess(command, 1, stdout="failed", stderr="error")
+
+    monkeypatch.setattr(ci_runner.subprocess, "run", fake_run)
+
+    assert ci_runner.run_tests() is False
 
 
-def test_check_telegram_uses_env_only(monkeypatch) -> None:
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "token")
-    monkeypatch.setenv("TELEGRAM_CHAT_ID", "chat")
+def test_notify_invokes_ci_notifier(monkeypatch) -> None:
+    """notify should call the Telegram notifier script with the status."""
+    calls = []
 
-    assert check_telegram() is True
+    def fake_run(command):
+        calls.append(command)
+        return subprocess.CompletedProcess(command, 0)
+
+    monkeypatch.setattr(ci_runner.subprocess, "run", fake_run)
+
+    ci_runner.notify("success")
+
+    assert calls == [["python", "monitoring/ci_notifier.py", "success"]]

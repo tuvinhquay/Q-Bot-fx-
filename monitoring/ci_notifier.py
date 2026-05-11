@@ -1,20 +1,37 @@
-"""Notify Telegram with the CI Mini result."""
-
-from __future__ import annotations
-
+import os
 import sys
+import requests
+from datetime import datetime
 
-from telegram_alert import send_telegram_message
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 
-def notify(status: str) -> None:
-    """Send a success or failure message for a CI Mini run."""
+def send_message(text: str):
+    if not BOT_TOKEN or not CHAT_ID:
+        print("⚠️ Missing TELEGRAM env variables")
+        return
+
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+
+    payload = {
+        "chat_id": CHAT_ID,
+        "text": text,
+        "parse_mode": "HTML"
+    }
+
+    requests.post(url, json=payload)
+
+
+def notify(status: str):
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
     if status == "success":
-        msg = "✅ <b>CI MINI PASSED</b>\nSystem is healthy."
+        msg = f"✅ <b>CI MINI PASSED</b>\nTime: {now}"
     else:
-        msg = "🚨 <b>CI MINI FAILED</b>\nCheck GitHub Actions immediately!"
+        msg = f"❌ <b>CI MINI FAILED</b>\nTime: {now}"
 
-    send_telegram_message(msg)
+    send_message(msg)
 
 
 if __name__ == "__main__":
