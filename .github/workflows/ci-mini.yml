@@ -22,21 +22,15 @@ jobs:
       - name: Cài thư viện cần thiết
         run: |
           python -m pip install --upgrade pip
-<<<<<<< HEAD
-          pip install pytest pytest-asyncio
-=======
           pip install pytest pytest-asyncio requests
->>>>>>> origin/codex/setup-ci-mini-for-automatic-testing
 
       - name: Chạy CI Mini tests
         run: |
           python -m pytest Q-Bot-FX
 
-
       - name: Notify Telegram Success
         if: success()
         run: |
-          pip install requests
           python monitoring/ci_notifier.py success
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -45,7 +39,6 @@ jobs:
       - name: Notify Telegram Failure
         if: failure()
         run: |
-          pip install requests
           python monitoring/ci_notifier.py fail
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
