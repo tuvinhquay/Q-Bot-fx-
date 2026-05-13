@@ -7,8 +7,9 @@ from datetime import datetime
 
 from backend.data.market_data import get_latest_market_data
 from backend.execution.trade_executor import TradeExecutor
+from backend.guards.market_guard import is_market_open
 from backend.mt5.connector import MT5Connector
-from backend.risk.risk_manager import calculate_lot, check_risk
+from backend.risk.risk_manager import RiskManager, check_risk
 from backend.services.telegram_service import TelegramService
 from backend.strategy.demo_strategy import generate_signal
 from config.settings import Settings
@@ -16,7 +17,12 @@ from config.settings import Settings
 LOGGER = logging.getLogger(__name__)
 
 
-def run_signal_pipeline(settings: Settings) -> None:
+def run_signal_pipeline(settings: Settings) -> str | None:
+    # ===== MARKET GUARD =====
+    if not is_market_open():
+        print("⏸ Bỏ qua chu kỳ trading vì thị trường đang đóng cửa.")
+        return "Market closed"
+
     connector = MT5Connector(settings)
     connected = connector.connect()
     if not connected:
@@ -43,15 +49,26 @@ def run_signal_pipeline(settings: Settings) -> None:
 
     symbol = settings.SYMBOLS[0]
     executor = TradeExecutor()
+    risk = RiskManager()
+
+    current_open_trades = executor.count_open_positions()
+    if not risk.can_open_new_trade(current_open_trades):
+        LOGGER.info("Too many open trades: %s", current_open_trades)
+        return "Too many open trades"
+
     if executor.has_open_position(symbol):
         LOGGER.info("Existing open position for %s, skipping new order.", symbol)
         return
 
     account_info = connector.get_account_info()
-    balance = account_info.get("balance")
+    balance = account_info.get("balance") or risk.account_balance
     LOGGER.info("Account balance: %s", balance)
 
-    lot = calculate_lot(balance, settings.RISK_PERCENT)
+    if not risk.check_daily_drawdown(balance):
+        LOGGER.warning("Daily loss limit reached, stopping trading for today.")
+        return "Daily loss limit reached"
+
+    lot = risk.calculate_lot_size(balance, risk.default_stop_loss_pips)
     LOGGER.info("Calculated lot size: %s", lot)
 
     success, ticket = executor.open_market_order(symbol, signal, lot)
