@@ -1,54 +1,109 @@
-"""Tests for CI Mini Level 1.5 detailed reports."""
+"""
+Tests for CI Mini report builder (Prompt 13 version)
+Compatible with new build_report(results, services)
+"""
 
-from __future__ import annotations
-
-import sys
-from pathlib import Path
-
-REPO_ROOT = Path(__file__).resolve().parents[2]
-CI_MINI_DIR = REPO_ROOT / "ci-mini"
-if str(CI_MINI_DIR) not in sys.path:
-    sys.path.insert(0, str(CI_MINI_DIR))
-
-from ci_runner import build_report
-from service_checker import check_telegram
+from ci_mini.ci_runner import build_report
 
 
-def test_build_report_healthy() -> None:
-    report = build_report(
-        {
-            "backend_api": True,
-            "trading_api": True,
-            "telegram": True,
-            "smoke_trade": True,
-        }
-    )
-
-    assert "Backend API: OK" in report
-    assert "Trading API: OK" in report
-    assert "Telegram: OK" in report
-    assert "Smoke Trade: OK" in report
-    assert "SYSTEM STATUS: HEALTHY" in report
+# ============================================================
+# HELPER DATA
+# ============================================================
 
 
-def test_build_report_error() -> None:
-    report = build_report(
-        {
-            "backend_api": True,
-            "trading_api": False,
-            "telegram": True,
-            "smoke_trade": False,
-        }
-    )
-
-    assert "Backend API: OK" in report
-    assert "Trading API: FAIL" in report
-    assert "Smoke Trade: FAIL" in report
-    assert "SYSTEM STATUS: ERROR" in report
+def sample_success_results():
+    return [
+        ("Bot Telegram", True, "OK"),
+        ("Backend API", True, "OK"),
+        ("Python Trading Engine", True, "OK"),
+        ("Trading Simulation", True, "OK"),
+    ]
 
 
-def test_check_telegram_uses_env_only(monkeypatch) -> None:
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "token")
-    monkeypatch.setenv("TELEGRAM_CHAT_ID", "chat")
+def sample_fail_results():
+    return [
+        ("Bot Telegram", False, "Connection error"),
+        ("Backend API", True, "OK"),
+    ]
 
-    assert check_telegram() is True
+
+def all_services_ok():
+    return {
+        "backend_api": True,
+        "trading_api": True,
+        "telegram_bot": True,
+        "smoke_trade": True,
+    }
+
+
+def some_services_fail():
+    return {
+        "backend_api": False,
+        "trading_api": True,
+        "telegram_bot": True,
+        "smoke_trade": False,
+    }
+
+
+# ============================================================
+# TESTS
+# ============================================================
+
+
+def test_report_all_ok():
+    """System should be HEALTHY when everything passes"""
+    results = sample_success_results()
+    services = all_services_ok()
+
+    ok, report = build_report(results, services)
+
+    assert ok is True
+    assert "HỆ THỐNG HOẠT ĐỘNG ỔN ĐỊNH" in report
+    assert "✅ HOẠT ĐỘNG — Bot Telegram" in report
+    assert "✅ HOẠT ĐỘNG — backend_api" in report
+
+
+def test_report_health_check_fail():
+    """System should be ERROR when health check fails"""
+    results = sample_fail_results()
+    services = all_services_ok()
+
+    ok, report = build_report(results, services)
+
+    assert ok is False
+    assert "PHÁT HIỆN LỖI HỆ THỐNG" in report
+    assert "❌ LỖI — Bot Telegram" in report
+
+
+def test_report_service_fail():
+    """System should be ERROR when service checker fails"""
+    results = sample_success_results()
+    services = some_services_fail()
+
+    ok, report = build_report(results, services)
+
+    assert ok is False
+    assert "PHÁT HIỆN LỖI HỆ THỐNG" in report
+    assert "❌ LỖI — backend_api" in report
+    assert "❌ LỖI — smoke_trade" in report
+
+
+def test_report_contains_timestamp():
+    """Report must contain timestamp"""
+    results = sample_success_results()
+    services = all_services_ok()
+
+    ok, report = build_report(results, services)
+
+    assert "⏰" in report
+
+
+def test_report_contains_sections():
+    """Report must contain both sections"""
+    results = sample_success_results()
+    services = all_services_ok()
+
+    ok, report = build_report(results, services)
+
+    assert "KIỂM TRA SỨC KHỎE HỆ THỐNG" in report
+    assert "KIỂM TRA DỊCH VỤ" in report
