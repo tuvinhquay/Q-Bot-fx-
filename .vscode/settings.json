@@ -1,0 +1,13 @@
+{
+  "python.defaultInterpreterPath": "D:/Q-Bot-fx-/.venv/Scripts/python.exe",
+
+  "python.analysis.extraPaths": [
+    "./typings",
+    "./dashboard-web/app",
+    "./dashboard-web/app/typings"
+  ],
+
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.autoImportCompletions": true,
+  "python-envs.defaultEnvManager": "ms-python.python:system"
+}

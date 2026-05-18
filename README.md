@@ -194,3 +194,11 @@ CI Mini hiện kiểm tra chi tiết từng thành phần trước khi gửi Tel
 
 Báo cáo Telegram hiển thị trạng thái từng service và kết luận `SYSTEM STATUS: HEALTHY` hoặc `SYSTEM STATUS: ERROR`.
 >>>>>>> origin/codex/setup-ci-mini-for-automatic-testing
+
+## PROMPT-13 Progress Update (MT5 Connector + FastAPI)
+- Added FastAPI entrypoint at `dashboard-web/app/main.py` for `uvicorn app.main:app --reload`.
+- Added repo-level MetaTrader5 stub at `typings/MetaTrader5.pyi` for global Pylance typing visibility.
+- Updated VSCode Python analysis paths in `.vscode/settings.json` to include `./typings`.
+- Added MT5 connector module in `dashboard-web/app/mt5_connector.py` and compatibility alias `dashboard-web/app/mt5_conector.py`.
+- Verified module import with `python -c "import app.main as m; print(m.app.title)"` in `dashboard-web`.
+- Verified TypeScript root build remains green with `npm run build`.
