@@ -12,22 +12,25 @@ from backend.mt5_gateway.mt5_health import check_mt5_health
 load_dotenv()
 
 
-# Fallback FastAPI when running tests without FastAPI installed
 if importlib.util.find_spec("fastapi") is not None:
     FastAPI = importlib.import_module("fastapi").FastAPI
 else:
-    class FastAPI:  # type: ignore
+    class FastAPI:  # type: ignore[no-redef]
+        """Minimal decorator-compatible fallback when FastAPI is not installed in tests."""
+
         def __init__(self, *args, **kwargs) -> None:
             pass
 
         def get(self, *args, **kwargs):
             def decorator(func):
                 return func
+
             return decorator
 
         def post(self, *args, **kwargs):
             def decorator(func):
                 return func
+
             return decorator
 
 
@@ -56,7 +59,6 @@ def test_trade() -> dict[str, str]:
 @app.get("/mt5/health")
 def mt5_health() -> dict[str, str]:
     ok = check_mt5_health()
-
     return {
         "status": "ok" if ok else "error",
         "component": "mt5_gateway",

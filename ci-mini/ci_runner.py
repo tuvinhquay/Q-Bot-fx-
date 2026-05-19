@@ -84,23 +84,45 @@ def run_service_checks() -> dict[str, bool]:
 # ============================================================
 
 def build_report(results: list[tuple[str, bool, str]], services: dict[str, bool]) -> tuple[bool, str]:
-    all_ok = all(ok for _, ok, _ in results) and all(services.values())
+    """Build the Prompt 13 CI Mini status report.
 
-    status_line = "🟢 SYSTEM HEALTHY" if all_ok else "🔴 SYSTEM ERROR"
+    Args:
+        results: Health-check tuples as (display name, ok, message).
+        services: Service-check status keyed by service name.
 
-    report = f"{status_line}\n"
-    report += "🧠 CI MINI REPORT\n"
-    report += f"⏰ {datetime.now().isoformat(timespec='seconds')}\n\n"
+    Returns:
+        A tuple of (all_ok, report_text).
+    """
+    health_ok = all(ok for _, ok, _ in results)
+    services_ok = all(services.values())
+    all_ok = health_ok and services_ok
 
-    report += "=== HEALTH CHECK ===\n"
+    status_line = "🟢 HỆ THỐNG HOẠT ĐỘNG ỔN ĐỊNH" if all_ok else "🔴 PHÁT HIỆN LỖI HỆ THỐNG"
+
+    report_lines = [
+        status_line,
+        "🧠 CI MINI REPORT",
+        f"⏰ {datetime.now().isoformat(timespec='seconds')}",
+        "",
+        "=== KIỂM TRA SỨC KHỎE HỆ THỐNG ===",
+    ]
+
     for name, ok, msg in results:
-        report += f"{'✅ PASS' if ok else '❌ FAIL'} — {name}\n{msg}\n"
+        state = "✅ HOẠT ĐỘNG" if ok else "❌ LỖI"
+        report_lines.append(f"{state} — {name}")
+        if msg:
+            report_lines.append(str(msg))
 
-    report += "\n=== SERVICE CHECKER ===\n"
+    report_lines.extend([
+        "",
+        "=== KIỂM TRA DỊCH VỤ ===",
+    ])
+
     for name, ok in services.items():
-        report += f"{'✅ PASS' if ok else '❌ FAIL'} — {name}\n"
+        state = "✅ HOẠT ĐỘNG" if ok else "❌ LỖI"
+        report_lines.append(f"{state} — {name}")
 
-    return all_ok, report
+    return all_ok, "\n".join(report_lines)
 
 
 # ============================================================
