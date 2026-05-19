@@ -14,8 +14,8 @@ def is_market_open() -> bool:
     weekday = now.weekday()
 
     if weekday in [5, 6]:
-        print("🚫 Market closed: Weekend detected")
+        print("Market closed: Weekend detected")
         return False
 
-    print("✅ Market open: Weekday detected")
+    print("Market open: Weekday detected")
     return True

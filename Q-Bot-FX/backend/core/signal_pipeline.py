@@ -5,13 +5,13 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 
+from backend.analysis.strategy_engine import generate_signal
 from backend.data.market_data import get_latest_market_data
 from backend.execution.trade_executor import TradeExecutor
 from backend.guards.market_guard import is_market_open
 from backend.mt5.connector import MT5Connector
 from backend.risk.risk_manager import RiskManager, check_risk
 from backend.services.telegram_service import TelegramService
-from backend.analysis.strategy_engine import generate_signal
 from config.settings import Settings
 
 LOGGER = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ LOGGER = logging.getLogger(__name__)
 def run_signal_pipeline(settings: Settings) -> str | None:
     # ===== MARKET GUARD =====
     if not is_market_open():
-        print("⏸ Bỏ qua chu kỳ trading vì thị trường đang đóng cửa.")
+        print("Skip trading cycle: market is closed.")
         return "Market closed"
 
     connector = MT5Connector(settings)
@@ -29,7 +29,7 @@ def run_signal_pipeline(settings: Settings) -> str | None:
         LOGGER.error("MT5 init failed")
         raise RuntimeError("MT5 connection failed")
 
-    print("🔌 MT5 connected")
+    print("MT5 connected")
     LOGGER.info("MT5 connected: OK")
 
     candles = get_latest_market_data(connector)
@@ -80,7 +80,7 @@ def run_signal_pipeline(settings: Settings) -> str | None:
 
     telegram = TelegramService(settings.TELEGRAM_BOT_TOKEN, settings.TELEGRAM_CHAT_ID)
     message = (
-        "🚀 Q-Bot-FX OPEN TRADE\n\n"
+        "Q-Bot-FX OPEN TRADE\n\n"
         f"Symbol: {symbol}\n"
         f"Signal: {signal}\n"
         f"Lot: {lot}\n"

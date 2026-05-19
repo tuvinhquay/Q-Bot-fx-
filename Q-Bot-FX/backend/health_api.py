@@ -2,21 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-<<<<<<< Updated upstream
-
-from fastapi import FastAPI
-=======
 import importlib
-import os
+from datetime import datetime
 
-# ⭐ ADD: load .env
 from dotenv import load_dotenv
 
-# Load .env from project root
-load_dotenv()
-
 from backend.mt5_gateway.mt5_health import check_mt5_health
+
+load_dotenv()
 
 
 # Fallback FastAPI when running tests without FastAPI installed
@@ -36,15 +29,11 @@ else:
             def decorator(func):
                 return func
             return decorator
->>>>>>> Stashed changes
 
 
 app = FastAPI(title="Q-Bot-FX Trading Engine Health")
 
 
-# ==============================
-# CORE ENGINE HEALTH
-# ==============================
 @app.get("/health")
 def health() -> dict[str, str]:
     return {
@@ -54,9 +43,6 @@ def health() -> dict[str, str]:
     }
 
 
-# ==============================
-# SAFE TEST TRADE (SIMULATION)
-# ==============================
 @app.post("/test-trade")
 def test_trade() -> dict[str, str]:
     return {
@@ -65,13 +51,8 @@ def test_trade() -> dict[str, str]:
         "message": "Trade simulation completed",
         "time": datetime.utcnow().isoformat(timespec="seconds") + "Z",
     }
-<<<<<<< Updated upstream
-=======
 
 
-# ==============================
-# MT5 HEALTH CHECK
-# ==============================
 @app.get("/mt5/health")
 def mt5_health() -> dict[str, str]:
     ok = check_mt5_health()
@@ -81,4 +62,3 @@ def mt5_health() -> dict[str, str]:
         "component": "mt5_gateway",
         "time": datetime.utcnow().isoformat(timespec="seconds") + "Z",
     }
->>>>>>> Stashed changes

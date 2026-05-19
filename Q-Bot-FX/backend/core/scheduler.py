@@ -12,24 +12,29 @@ from config.settings import Settings
 LOGGER = logging.getLogger(__name__)
 
 
-def start_trading_loop(settings: Settings) -> None:
+def start_trading_loop(settings: Settings, run_once: bool = False) -> None:
     """Start continuous trading loop with configured interval."""
-    print("🚀 QBOT Trading Engine Started")
-    print(f"⏱ Chu kỳ chạy: {settings.TRADE_INTERVAL_MINUTES} phút")
+    print("QBOT Trading Engine Started")
+    print(f"Run interval: {settings.TRADE_INTERVAL_MINUTES} minutes")
 
     while True:
         try:
             print("\n==============================")
-            print(f"🕒 Scan lúc: {datetime.now()}")
+            print(f"Scan time: {datetime.now()}")
 
             run_signal_pipeline(settings)
 
-            print("✅ Hoàn thành chu kỳ")
+            print("Cycle completed")
             print("==============================")
 
         except Exception as e:
-            LOGGER.error("❌ Lỗi vòng lặp: %s", e)
-            print(f"❌ Lỗi vòng lặp: {e}")
+            LOGGER.error("Loop error: %s", e)
+            print(f"Loop error: {e}")
 
-        # ngủ theo số phút cấu hình
+        if run_once:
+            print("Test cycle finished. Exiting.")
+            break
+
         time.sleep(settings.TRADE_INTERVAL_MINUTES * 60)
+
+    print("Q-Bot stopped safely.")

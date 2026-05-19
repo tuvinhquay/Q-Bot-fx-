@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import sys
 from pathlib import Path
+from typing import Dict
 
 import MetaTrader5 as mt5
 import pandas as pd
@@ -48,8 +49,8 @@ class MT5Connector:
         LOGGER.warning("MT5 connection failed: %s", mt5.last_error())
         return False
 
-    def get_account_info(self) -> dict:
-        """Return basic account info (balance/equity)."""
+    def get_account_info(self) -> Dict[str, float | None]:
+        """Return account balance & equity safely."""
         if not self.is_connected:
             return {"balance": None, "equity": None}
 
@@ -58,17 +59,45 @@ class MT5Connector:
             LOGGER.warning("Failed to fetch account info.")
             return {"balance": None, "equity": None}
 
-        return {"balance": info.balance, "equity": info.equity}
+        return {
+            "balance": float(info.balance),
+            "equity": float(info.equity),
+        }
 
-    def get_rates(self, symbol: str = "EURUSD", timeframe: int = mt5.TIMEFRAME_M5, n: int = 50) -> pd.DataFrame:
-        """Fetch latest candle data and return DataFrame."""
+    def get_rates(
+        self,
+        symbol: str,
+        timeframe: int,
+        n: int
+    ) -> pd.DataFrame:
+        """Fetch latest candle data from MT5 safely."""
+
         if not self.is_connected:
-            LOGGER.warning("Skipping get_rates because MT5 is not connected.")
+            LOGGER.warning("MT5 not connected, skipping rates fetch.")
             return pd.DataFrame()
 
-        rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, n)
-        if rates is None:
-            LOGGER.warning("No rates returned for %s.", symbol)
-            return pd.DataFrame()
+        try:
+            # ensure symbol exists in broker
+            symbol_info = mt5.symbol_info(symbol)
+            if symbol_info is None:
+                LOGGER.warning("Symbol %s not found on broker.", symbol)
+                return pd.DataFrame()
 
-        return pd.DataFrame(rates)
+            # ensure symbol visible in MarketWatch
+            if not symbol_info.visible:
+                LOGGER.info("Enabling symbol %s in MarketWatch", symbol)
+                mt5.symbol_select(symbol, True)
+
+            rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, n)
+
+            if rates is None or len(rates) == 0:
+                LOGGER.warning("No rates returned for %s.", symbol)
+                return pd.DataFrame()
+
+            df = pd.DataFrame(rates)
+            LOGGER.info("Fetched %s candles for %s", len(df), symbol)
+            return df
+
+        except Exception as e:
+            LOGGER.exception("MT5 get_rates error: %s", e)
+            return pd.DataFrame()
