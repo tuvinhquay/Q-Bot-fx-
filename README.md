@@ -207,3 +207,19 @@ Báo cáo Telegram hiển thị trạng thái từng service và kết luận `S
 Multi timeframe strategy:
 D1 trend -> H4 confirm -> H1 entry
 Smart SL & Smart TP implemented.
+
+---
+
+## ?? Prompt 16 � Telegram Notification
+
+### Added
+- Telegram alert system when BUY/SELL signal appears
+- New module: `backend/notifications/telegram_notifier.py`
+
+### Updated
+- `signal_pipeline.py`
+  - Bot now sends Telegram message when trade signal detected
+
+### Dev workflow
+- Continue Git branch per prompt
+- Improved production readiness

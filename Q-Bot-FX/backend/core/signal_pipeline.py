@@ -10,6 +10,7 @@ from backend.data.market_data import get_latest_market_data
 from backend.execution.trade_executor import TradeExecutor
 from backend.guards.market_guard import is_market_open
 from backend.mt5.connector import MT5Connector
+from backend.notifications.telegram_notifier import TelegramNotifier
 from backend.risk.risk_manager import RiskManager, check_risk
 from backend.services.telegram_service import TelegramService
 from config.settings import Settings
@@ -39,6 +40,22 @@ def run_signal_pipeline(settings: Settings) -> str | None:
     signal_data = generate_signal(symbol)
     signal = signal_data.action
     LOGGER.info("Signal: %s (confidence=%.2f)", signal, signal_data.confidence)
+    confidence = signal_data.confidence
+
+    # ===== SEND TELEGRAM ALERT =====
+    if signal in ["BUY", "SELL"]:
+        notifier = TelegramNotifier(settings)
+
+        msg = f"""
+<b>Q-Bot FX Signal</b>
+
+Pair: {symbol}
+Signal: <b>{signal}</b>
+Confidence: {confidence:.2f}
+Timeframe: H1 entry
+"""
+
+        notifier.send(msg)
 
     if signal == "HOLD":
         LOGGER.info("No trade signal, stopping pipeline.")
