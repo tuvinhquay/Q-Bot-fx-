@@ -11,7 +11,7 @@ from backend.guards.market_guard import is_market_open
 from backend.mt5.connector import MT5Connector
 from backend.risk.risk_manager import RiskManager, check_risk
 from backend.services.telegram_service import TelegramService
-from backend.strategy.demo_strategy import generate_signal
+from backend.analysis.strategy_engine import generate_signal
 from config.settings import Settings
 
 LOGGER = logging.getLogger(__name__)
@@ -35,9 +35,10 @@ def run_signal_pipeline(settings: Settings) -> str | None:
     candles = get_latest_market_data(connector)
     LOGGER.info("Fetched candles: %s", len(candles))
 
-    signal_data = generate_signal(candles)
-    signal = signal_data.get("signal", "HOLD")
-    LOGGER.info("Signal: %s", signal)
+    symbol = settings.SYMBOLS[0]
+    signal_data = generate_signal(symbol)
+    signal = signal_data.action
+    LOGGER.info("Signal: %s (confidence=%.2f)", signal, signal_data.confidence)
 
     if signal == "HOLD":
         LOGGER.info("No trade signal, stopping pipeline.")
@@ -47,7 +48,6 @@ def run_signal_pipeline(settings: Settings) -> str | None:
         LOGGER.info("Risk check failed, stopping pipeline.")
         return
 
-    symbol = settings.SYMBOLS[0]
     executor = TradeExecutor()
     risk = RiskManager()
 

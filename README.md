@@ -202,3 +202,8 @@ Báo cáo Telegram hiển thị trạng thái từng service và kết luận `S
 - Added MT5 connector module in `dashboard-web/app/mt5_connector.py` and compatibility alias `dashboard-web/app/mt5_conector.py`.
 - Verified module import with `python -c "import app.main as m; print(m.app.title)"` in `dashboard-web`.
 - Verified TypeScript root build remains green with `npm run build`.
+
+## Prompt 14 - Trading Strategy Engine
+Multi timeframe strategy:
+D1 trend -> H4 confirm -> H1 entry
+Smart SL & Smart TP implemented.
