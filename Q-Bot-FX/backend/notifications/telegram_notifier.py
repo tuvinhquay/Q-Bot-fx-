@@ -24,3 +24,11 @@ class TelegramNotifier:
             LOGGER.info("Telegram alert sent.")
         except Exception as e:
             LOGGER.warning(f"Telegram send failed: {e}")
+
+    def send_photo(self, image_path: str, caption: str) -> None:
+        url = f"https://api.telegram.org/bot{self.token}/sendPhoto"
+
+        with open(image_path, "rb") as img:
+            files = {"photo": img}
+            data = {"chat_id": self.chat_id, "caption": caption}
+            requests.post(url, files=files, data=data)

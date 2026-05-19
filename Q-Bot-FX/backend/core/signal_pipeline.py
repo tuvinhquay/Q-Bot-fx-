@@ -5,7 +5,10 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 
+import MetaTrader5 as mt5
+
 from backend.analysis.strategy_engine import generate_signal
+from backend.chart.chart_generator import generate_chart
 from backend.data.market_data import get_latest_market_data
 from backend.execution.trade_executor import TradeExecutor
 from backend.guards.market_guard import is_market_open
@@ -45,17 +48,34 @@ def run_signal_pipeline(settings: Settings) -> str | None:
     # ===== SEND TELEGRAM ALERT =====
     if signal in ["BUY", "SELL"]:
         notifier = TelegramNotifier(settings)
+        trade_levels = {
+            "entry": float(candles["close"].iloc[-1]) if not candles.empty else 0.0,
+            "stop_loss": signal_data.sl,
+            "take_profit": signal_data.tp,
+        }
 
-        msg = f"""
-<b>Q-Bot FX Signal</b>
+        chart_df = connector.get_rates(
+            symbol=symbol,
+            timeframe=mt5.TIMEFRAME_H1,
+            n=settings.CANDLES_H1,
+        )
 
-Pair: {symbol}
-Signal: <b>{signal}</b>
-Confidence: {confidence:.2f}
-Timeframe: H1 entry
-"""
+        chart_path = generate_chart(
+            chart_df,
+            symbol=symbol,
+            entry=trade_levels["entry"],
+            sl=trade_levels["stop_loss"],
+            tp=trade_levels["take_profit"],
+        )
 
-        notifier.send(msg)
+        caption = (
+            f"{signal} {symbol}\n"
+            f"Entry: {trade_levels['entry']}\n"
+            f"SL: {trade_levels['stop_loss']}\n"
+            f"TP: {trade_levels['take_profit']}"
+        )
+
+        notifier.send_photo(chart_path, caption)
 
     if signal == "HOLD":
         LOGGER.info("No trade signal, stopping pipeline.")

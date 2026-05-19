@@ -223,3 +223,12 @@ Smart SL & Smart TP implemented.
 ### Dev workflow
 - Continue Git branch per prompt
 - Improved production readiness
+
+## Prompt 17 — Chart Screenshot Engine
+
+Bot now sends chart image to Telegram when BUY/SELL signal appears.
+
+Features:
+- Generate H1 chart from MT5 candles
+- Draw Entry / SL / TP levels
+- Send image via Telegram
