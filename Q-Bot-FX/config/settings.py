@@ -52,6 +52,11 @@ class Settings:
         # Scheduler
         self.TRADE_INTERVAL_MINUTES = 5
 
+        # Force signal test mode
+        self.FORCE_SIGNAL_MODE = os.getenv("FORCE_SIGNAL_MODE", "false").lower() == "true"
+        self.FORCE_SIGNAL_TYPE = os.getenv("FORCE_SIGNAL_TYPE", "BUY")
+        self.FORCE_SIGNAL_SYMBOL = os.getenv("FORCE_SIGNAL_SYMBOL", "EURUSDm")
+
         print("SETTINGS FILE LOADED SUCCESSFULLY")
         print("SYMBOL LIST:", self.SYMBOLS)
         print("TIMEFRAMES:", self.TIMEFRAME_D1, self.TIMEFRAME_H4, self.TIMEFRAME_H1)
@@ -62,3 +67,9 @@ class Settings:
         if not value:
             raise ValueError(f"Missing required environment variable: {name}")
         return value
+
+
+# ===== FORCE SIGNAL TEST MODE =====
+FORCE_SIGNAL_MODE = os.getenv("FORCE_SIGNAL_MODE", "false").lower() == "true"
+FORCE_SIGNAL_TYPE = os.getenv("FORCE_SIGNAL_TYPE", "BUY")
+FORCE_SIGNAL_SYMBOL = os.getenv("FORCE_SIGNAL_SYMBOL", "EURUSDm")

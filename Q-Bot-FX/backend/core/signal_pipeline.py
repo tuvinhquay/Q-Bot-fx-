@@ -16,7 +16,7 @@ from backend.mt5.connector import MT5Connector
 from backend.notifications.telegram_notifier import TelegramNotifier
 from backend.risk.risk_manager import RiskManager, check_risk
 from backend.services.telegram_service import TelegramService
-from config.settings import Settings
+from config.settings import FORCE_SIGNAL_MODE, FORCE_SIGNAL_SYMBOL, FORCE_SIGNAL_TYPE, Settings
 
 LOGGER = logging.getLogger(__name__)
 
@@ -40,18 +40,30 @@ def run_signal_pipeline(settings: Settings) -> str | None:
     LOGGER.info("Fetched candles: %s", len(candles))
 
     symbol = settings.SYMBOLS[0]
-    signal_data = generate_signal(symbol)
-    signal = signal_data.action
-    LOGGER.info("Signal: %s (confidence=%.2f)", signal, signal_data.confidence)
-    confidence = signal_data.confidence
+    if FORCE_SIGNAL_MODE and symbol == FORCE_SIGNAL_SYMBOL:
+        LOGGER.warning("FORCE SIGNAL MODE ENABLED")
+        signal = FORCE_SIGNAL_TYPE
+        confidence = 0.99
+        fake_entry = float(candles["close"].iloc[-1]) if not candles.empty else 0.0
+        signal_sl = fake_entry * (0.998 if signal == "BUY" else 1.002)
+        signal_tp = fake_entry * (1.004 if signal == "BUY" else 0.996)
+        LOGGER.warning("[FORCED SIGNAL] %s %s", FORCE_SIGNAL_TYPE, symbol)
+    else:
+        signal_data = generate_signal(symbol)
+        signal = signal_data.action
+        confidence = signal_data.confidence
+        signal_sl = signal_data.sl
+        signal_tp = signal_data.tp
+
+    LOGGER.info("Signal: %s (confidence=%.2f)", signal, confidence)
 
     # ===== SEND TELEGRAM ALERT =====
     if signal in ["BUY", "SELL"]:
         notifier = TelegramNotifier(settings)
         trade_levels = {
             "entry": float(candles["close"].iloc[-1]) if not candles.empty else 0.0,
-            "stop_loss": signal_data.sl,
-            "take_profit": signal_data.tp,
+            "stop_loss": signal_sl,
+            "take_profit": signal_tp,
         }
 
         chart_df = connector.get_rates(
@@ -77,7 +89,7 @@ def run_signal_pipeline(settings: Settings) -> str | None:
 
         notifier.send_photo(chart_path, caption)
 
-    if signal == "HOLD":
+    if signal == "HOLD" and not FORCE_SIGNAL_MODE:
         LOGGER.info("No trade signal, stopping pipeline.")
         return
 
