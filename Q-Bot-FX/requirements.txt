@@ -7,3 +7,4 @@ schedule
 requests
 fastapi
 uvicorn
+matplotlib

@@ -232,3 +232,11 @@ Features:
 - Generate H1 chart from MT5 candles
 - Draw Entry / SL / TP levels
 - Send image via Telegram
+
+## Prompt 20 — Historical Backtest Engine
+
+- Replay candles from historical MT5 data
+- Simulated trading execution (no live order_send)
+- Equity curve generation (`backtest_equity.png`)
+- Performance metrics and terminal report
+- Historical analytics layer for strategy evaluation
