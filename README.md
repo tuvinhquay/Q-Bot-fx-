@@ -255,3 +255,11 @@ Features:
 - Regime filtering
 - Self-learning market selection
 - Dynamic strategy weighting
+
+## Prompt 23 — AI Portfolio Risk Manager
+
+- Portfolio heat
+- Correlation filtering
+- Dynamic risk scaling
+- Exposure control
+- Hedge-fund style protection layer

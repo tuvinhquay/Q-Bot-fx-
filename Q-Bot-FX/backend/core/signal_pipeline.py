@@ -25,6 +25,7 @@ from backend.performance.performance_engine import (
     should_send_daily_report,
 )
 from backend.performance.trade_logger import log_trade
+from backend.portfolio.portfolio_manager import PortfolioManager
 from backend.risk.risk_manager import RiskManager, check_risk
 from backend.services.telegram_service import TelegramService
 from config.settings import FORCE_SIGNAL_MODE, FORCE_SIGNAL_SYMBOL, FORCE_SIGNAL_TYPE, Settings
@@ -90,6 +91,29 @@ def run_signal_pipeline(settings: Settings) -> str | None:
         LOGGER.info("[AI DECISION] Market filtered out")
         signal = "HOLD"
 
+    symbol_data = {}
+    for s in settings.SYMBOLS[: min(4, len(settings.SYMBOLS))]:
+        symbol_data[s] = connector.get_rates(symbol=s, timeframe=mt5.TIMEFRAME_H1, n=200)
+
+    portfolio_manager = PortfolioManager(max_heat_percent=6.0)
+    portfolio_result = portfolio_manager.validate_trade(
+        symbol=symbol,
+        signal=signal if signal in ["BUY", "SELL"] else "BUY",
+        symbol_data=symbol_data,
+        performance_stats=perf_stats,
+        market_regime=market_regime,
+        base_risk_percent=1.0,
+    )
+    LOGGER.info("[PORTFOLIO HEAT] %.2f%%", portfolio_result["portfolio_heat"])
+    if not portfolio_result["allow_trade"]:
+        if "Correlation" in portfolio_result["reason"]:
+            LOGGER.info("[CORRELATION FILTER] blocked %s", symbol)
+        if "exposure" in portfolio_result["reason"]:
+            LOGGER.info("[EXPOSURE FILTER] %s", portfolio_result["reason"])
+        LOGGER.info("[AI DECISION] Market filtered out")
+        signal = "HOLD"
+    LOGGER.info("[DYNAMIC RISK] adjusted risk=%.2f%%", portfolio_result["dynamic_risk"])
+
     # ===== SEND TELEGRAM ALERT =====
     if signal in ["BUY", "SELL"]:
         notifier = TelegramNotifier(settings)
@@ -120,7 +144,11 @@ def run_signal_pipeline(settings: Settings) -> str | None:
             f"TP: {trade_levels['take_profit']}\n"
             f"AI Score: {adaptive['adaptive_score']:.2f}\n"
             f"Market Regime: {market_regime['regime']}\n"
-            f"AI Weight: {adaptive['weight']:.2f}"
+            f"AI Weight: {adaptive['weight']:.2f}\n"
+            f"Portfolio Heat: {portfolio_result['portfolio_heat']:.2f}%\n"
+            f"Dynamic Risk: {portfolio_result['dynamic_risk']:.2f}%\n"
+            f"Exposure: {portfolio_result['directional_bias']}\n"
+            f"Correlation Risk: {portfolio_result['correlation_risk']}"
         )
 
         notifier.send_photo(chart_path, caption)
@@ -153,6 +181,7 @@ def run_signal_pipeline(settings: Settings) -> str | None:
         LOGGER.warning("Daily loss limit reached, stopping trading for today.")
         return "Daily loss limit reached"
 
+    risk.risk_per_trade = portfolio_result["dynamic_risk"] / 100.0
     lot = risk.calculate_lot_size(balance, risk.default_stop_loss_pips)
     LOGGER.info("Calculated lot size: %s", lot)
 
