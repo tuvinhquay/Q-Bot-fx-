@@ -240,3 +240,11 @@ Features:
 - Equity curve generation (`backtest_equity.png`)
 - Performance metrics and terminal report
 - Historical analytics layer for strategy evaluation
+
+## Prompt 21 — Multi-Symbol Backtest Optimizer
+
+- Multi-market testing across symbols
+- Timeframe optimization
+- Strategy ranking with weighted score
+- CSV export of optimizer results
+- Top strategy detection and equity curve output
