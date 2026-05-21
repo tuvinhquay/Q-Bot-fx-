@@ -14,6 +14,13 @@ from backend.execution.trade_executor import TradeExecutor
 from backend.guards.market_guard import is_market_open
 from backend.mt5.connector import MT5Connector
 from backend.notifications.telegram_notifier import TelegramNotifier
+from backend.performance.performance_engine import (
+    calculate_performance,
+    format_performance_report,
+    mark_daily_report_sent,
+    should_send_daily_report,
+)
+from backend.performance.trade_logger import log_trade
 from backend.risk.risk_manager import RiskManager, check_risk
 from backend.services.telegram_service import TelegramService
 from config.settings import FORCE_SIGNAL_MODE, FORCE_SIGNAL_SYMBOL, FORCE_SIGNAL_TYPE, Settings
@@ -127,6 +134,15 @@ def run_signal_pipeline(settings: Settings) -> str | None:
 
     LOGGER.info("ORDER SENT SUCCESS: ticket=%s", ticket)
 
+    entry_price = float(candles["close"].iloc[-1]) if not candles.empty else 0.0
+    # Estimated profit at TP for journaling stats in live signal testing flow.
+    expected_profit = abs(signal_tp - entry_price) * float(lot) * 100000
+    log_trade(symbol, signal, lot, entry_price, signal_sl, signal_tp, expected_profit)
+
+    stats = calculate_performance()
+    report = format_performance_report(stats)
+    LOGGER.info("[PERFORMANCE]\n%s", report)
+
     telegram = TelegramService(settings.TELEGRAM_BOT_TOKEN, settings.TELEGRAM_CHAT_ID)
     message = (
         "Q-Bot-FX OPEN TRADE\n\n"
@@ -138,3 +154,8 @@ def run_signal_pipeline(settings: Settings) -> str | None:
     )
     if not telegram.send_message(message):
         LOGGER.warning("Telegram notification failed.")
+
+    if should_send_daily_report():
+        notifier = TelegramNotifier(settings)
+        notifier.send(report)
+        mark_daily_report_sent()
