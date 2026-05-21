@@ -7,6 +7,10 @@ from datetime import datetime
 
 import MetaTrader5 as mt5
 
+from backend.adaptive.adaptive_engine import calculate_adaptive_score
+from backend.adaptive.learning_memory import update_learning_memory
+from backend.adaptive.market_regime_detector import detect_market_regime
+from backend.adaptive.strategy_weight_manager import StrategyWeightManager
 from backend.analysis.strategy_engine import generate_signal
 from backend.chart.chart_generator import generate_chart
 from backend.data.market_data import get_latest_market_data
@@ -64,6 +68,28 @@ def run_signal_pipeline(settings: Settings) -> str | None:
 
     LOGGER.info("Signal: %s (confidence=%.2f)", signal, confidence)
 
+    perf_stats = calculate_performance() or {
+        "winrate": 0.5,
+        "profit_factor": 1.0,
+        "expectancy": 0.0,
+        "max_drawdown": 0.0,
+    }
+    market_regime = detect_market_regime(candles)
+    adaptive = calculate_adaptive_score(
+        symbol=symbol,
+        timeframe="H1",
+        performance_stats=perf_stats,
+        market_regime=market_regime,
+    )
+    LOGGER.info("[MARKET REGIME] %s", market_regime["regime"])
+    LOGGER.info("[ADAPTIVE SCORE] %.2f", adaptive["adaptive_score"])
+    LOGGER.info("[AI WEIGHT] %.2f", adaptive["weight"])
+    if adaptive["allow_trading"]:
+        LOGGER.info("[AI DECISION] Trading Allowed")
+    else:
+        LOGGER.info("[AI DECISION] Market filtered out")
+        signal = "HOLD"
+
     # ===== SEND TELEGRAM ALERT =====
     if signal in ["BUY", "SELL"]:
         notifier = TelegramNotifier(settings)
@@ -91,7 +117,10 @@ def run_signal_pipeline(settings: Settings) -> str | None:
             f"{signal} {symbol}\n"
             f"Entry: {trade_levels['entry']}\n"
             f"SL: {trade_levels['stop_loss']}\n"
-            f"TP: {trade_levels['take_profit']}"
+            f"TP: {trade_levels['take_profit']}\n"
+            f"AI Score: {adaptive['adaptive_score']:.2f}\n"
+            f"Market Regime: {market_regime['regime']}\n"
+            f"AI Weight: {adaptive['weight']:.2f}"
         )
 
         notifier.send_photo(chart_path, caption)
@@ -142,6 +171,11 @@ def run_signal_pipeline(settings: Settings) -> str | None:
     stats = calculate_performance()
     report = format_performance_report(stats)
     LOGGER.info("[PERFORMANCE]\n%s", report)
+    if stats:
+        key = f"{symbol}_H1"
+        manager = StrategyWeightManager()
+        manager.update_weight(key, stats)
+        update_learning_memory(key, market_regime["regime"], stats)
 
     telegram = TelegramService(settings.TELEGRAM_BOT_TOKEN, settings.TELEGRAM_CHAT_ID)
     message = (

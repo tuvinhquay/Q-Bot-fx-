@@ -248,3 +248,10 @@ Features:
 - Strategy ranking with weighted score
 - CSV export of optimizer results
 - Top strategy detection and equity curve output
+
+## Prompt 22 — Adaptive AI Strategy Engine
+
+- Adaptive scoring
+- Regime filtering
+- Self-learning market selection
+- Dynamic strategy weighting
