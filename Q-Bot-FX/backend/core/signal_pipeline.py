@@ -28,6 +28,7 @@ from backend.performance.trade_logger import log_trade
 from backend.portfolio.portfolio_manager import PortfolioManager
 from backend.risk.risk_manager import RiskManager, check_risk
 from backend.services.telegram_service import TelegramService
+from backend.services.telegram.formatter import build_telegram_caption
 from config.settings import FORCE_SIGNAL_MODE, FORCE_SIGNAL_SYMBOL, FORCE_SIGNAL_TYPE, Settings
 
 LOGGER = logging.getLogger(__name__)
@@ -137,21 +138,19 @@ def run_signal_pipeline(settings: Settings) -> str | None:
             tp=trade_levels["take_profit"],
         )
 
-        caption = (
-            f"{signal} {symbol}\n"
-            f"Entry: {trade_levels['entry']}\n"
-            f"SL: {trade_levels['stop_loss']}\n"
-            f"TP: {trade_levels['take_profit']}\n"
-            f"AI Score: {adaptive['adaptive_score']:.2f}\n"
-            f"Market Regime: {market_regime['regime']}\n"
-            f"AI Weight: {adaptive['weight']:.2f}\n"
-            f"Portfolio Heat: {portfolio_result['portfolio_heat']:.2f}%\n"
-            f"Dynamic Risk: {portfolio_result['dynamic_risk']:.2f}%\n"
-            f"Exposure: {portfolio_result['directional_bias']}\n"
-            f"Correlation Risk: {portfolio_result['correlation_risk']}"
+        LOGGER.info("[TELEGRAM] Sending AI alert...")
+        caption = build_telegram_caption(
+            signal=signal,
+            symbol=symbol,
+            trade_levels=trade_levels,
+            adaptive=adaptive,
+            market_regime=market_regime,
+            portfolio_result=portfolio_result,
         )
+        LOGGER.info("[TELEGRAM] Caption built successfully")
 
         notifier.send_photo(chart_path, caption)
+        LOGGER.info("[TELEGRAM] Photo sent successfully")
 
     if signal == "HOLD" and not FORCE_SIGNAL_MODE:
         LOGGER.info("No trade signal, stopping pipeline.")
