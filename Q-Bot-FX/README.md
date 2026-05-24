@@ -193,3 +193,40 @@ python backend/main.py --once
 - De mo rong Prompt 29+ cho execution timing theo top setup
 - De ket hop session intelligence va market-cycle prediction
 - De nang cap thanh autonomous portfolio optimization
+
+## Prompt 29 Milestone - AI Session & Timing Intelligence
+
+Prompt 29 bo sung market timing awareness de bot biet khi nao nen trade va khi nao nen ne.
+
+### Session AI modules
+
+- `backend/services/session_ai/session_detector.py`
+- `backend/services/session_ai/timing_score.py`
+- `backend/services/session_ai/spread_guard.py`
+- `backend/services/session_ai/volatility_trap.py`
+- `backend/services/session_ai/session_memory.py`
+- `backend/services/session_ai/timing_report.py`
+- `backend/services/session_ai/test_session_ai.py`
+
+### Nang luc moi
+
+- Nhan dien session: Asian, London, New York, overlap
+- Cham diem timing quality theo gio/session/spread/trap
+- Phat hien spread mo rong va rollover danger
+- Phat hien fake volatility/fake breakout
+- Time-based learning: luu session trong learning memory
+- Gui Telegram session timing report de canh bao
+
+### Compatibility
+
+- Khong sua execution core va MT5 order placement
+- Khong pha Prompt 23->28
+- Chi them protective layer theo session/timing
+
+### Test command Prompt 29
+
+```bash
+python -m py_compile backend
+python backend/services/session_ai/test_session_ai.py
+python backend/main.py --once
+```

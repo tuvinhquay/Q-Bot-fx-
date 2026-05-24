@@ -35,6 +35,7 @@ class LearningMemoryEngine:
         pnl: float,
         timeframe: str,
         timestamp: str | None = None,
+        session: str = "UNKNOWN",
     ) -> dict[str, Any]:
         LOGGER.info("[LEARNING] Recording trade memory...")
         entries = self.store.load()
@@ -49,6 +50,7 @@ class LearningMemoryEngine:
             "trade_result": trade_result,
             "pnl": round(float(pnl), 2),
             "timeframe": timeframe,
+            "session": session,
             "timestamp": timestamp or datetime.now(timezone.utc).isoformat(),
         }
         entries.append(item)

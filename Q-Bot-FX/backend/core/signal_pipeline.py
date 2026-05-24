@@ -36,6 +36,12 @@ from backend.services.adaptive_ai.adaptive_engine import AdaptiveIntelligenceEng
 from backend.services.adaptive_ai.adaptive_report import build_adaptive_report, build_adaptive_summary_for_telegram
 from backend.services.multi_symbol_ai.portfolio_brain import MultiSymbolPortfolioBrain
 from backend.services.multi_symbol_ai.reporting import build_top_setup_report
+from backend.services.session_ai.session_detector import detect_session
+from backend.services.session_ai.session_memory import infer_best_worst_session
+from backend.services.session_ai.spread_guard import evaluate_spread, is_rollover_danger
+from backend.services.session_ai.timing_report import build_session_report
+from backend.services.session_ai.timing_score import compute_timing_score
+from backend.services.session_ai.volatility_trap import detect_volatility_trap
 from config.settings import FORCE_SIGNAL_MODE, FORCE_SIGNAL_SYMBOL, FORCE_SIGNAL_TYPE, Settings
 
 LOGGER = logging.getLogger(__name__)
@@ -99,6 +105,32 @@ def run_signal_pipeline(settings: Settings) -> str | None:
         "max_drawdown": 0.0,
     }
     market_regime = detect_market_regime(candles)
+    session_info = detect_session()
+    spread_points = float(candles["spread"].iloc[-1]) if "spread" in candles.columns and not candles.empty else 12.0
+    spread_state = evaluate_spread(spread_points)
+    trap_state = detect_volatility_trap(candles)
+    timing_state = compute_timing_score(
+        session_name=str(session_info["session"]),
+        spread_quality=str(spread_state["spread_quality"]),
+        trap_score=float(trap_state["trap_score"]),
+    )
+    learning_rows = LearningMemoryEngine().store.load()
+    session_memory = infer_best_worst_session(learning_rows)
+    session_state = {
+        **session_info,
+        **timing_state,
+        **session_memory,
+        "spread_quality": spread_state["spread_quality"],
+        "trap_score": trap_state["trap_score"],
+        "note": spread_state["message"],
+    }
+    LOGGER.info(
+        "[SESSION AI] session=%s timing=%.2f spread=%s trap=%.2f",
+        session_state["session"],
+        session_state["timing_score"],
+        session_state["spread_quality"],
+        session_state["trap_score"],
+    )
     adaptive = calculate_adaptive_score(
         symbol=symbol,
         timeframe="H1",
@@ -112,6 +144,12 @@ def run_signal_pipeline(settings: Settings) -> str | None:
         LOGGER.info("[AI DECISION] Trading Allowed")
     else:
         LOGGER.info("[AI DECISION] Market filtered out")
+        signal = "HOLD"
+    if (not bool(spread_state["allow_trade"])) or bool(trap_state["is_trap"]) or float(timing_state["timing_score"]) < 45.0:
+        LOGGER.info("[SESSION AI] Trade blocked by timing/spread/trap protection.")
+        signal = "HOLD"
+    if is_rollover_danger(int(str(session_info["hour_utc"]).split(":")[0])):
+        LOGGER.info("[SESSION AI] Rollover danger detected, skip trading.")
         signal = "HOLD"
 
     symbol_data = {}
@@ -285,6 +323,8 @@ def run_signal_pipeline(settings: Settings) -> str | None:
         trade_result="OPEN",
         pnl=expected_profit,
         timeframe="H1",
+        timestamp=f"{datetime.utcnow():%Y-%m-%d %H:%M}",
+        session=str(session_state.get("session", "UNKNOWN")),
     )
     LOGGER.info("[LEARNING REPORT]\n%s", learning_engine.build_report())
 
@@ -309,3 +349,5 @@ def run_signal_pipeline(settings: Settings) -> str | None:
     notifier.send(capital_state["capital_report"])
     notifier.send(build_adaptive_report(adaptive_ai_state))
     notifier.send(build_top_setup_report(brain_state))
+    notifier.send(build_session_report(session_state))
+
