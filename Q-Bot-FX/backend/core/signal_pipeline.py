@@ -29,6 +29,8 @@ from backend.portfolio.portfolio_manager import PortfolioManager
 from backend.risk.risk_manager import RiskManager, check_risk
 from backend.services.telegram_service import TelegramService
 from backend.services.telegram.formatter import build_telegram_caption
+from backend.services.telegram.status_engine import classify_alert_status
+from backend.services.learning.memory_engine import LearningMemoryEngine
 from config.settings import FORCE_SIGNAL_MODE, FORCE_SIGNAL_SYMBOL, FORCE_SIGNAL_TYPE, Settings
 
 LOGGER = logging.getLogger(__name__)
@@ -204,6 +206,27 @@ def run_signal_pipeline(settings: Settings) -> str | None:
         manager = StrategyWeightManager()
         manager.update_weight(key, stats)
         update_learning_memory(key, market_regime["regime"], stats)
+
+    learning_status = classify_alert_status(
+        ai_score=float(adaptive.get("adaptive_score", 0.0)),
+        dynamic_risk=float(portfolio_result.get("dynamic_risk", 0.0)),
+        portfolio_heat=float(portfolio_result.get("portfolio_heat", 0.0)),
+        correlation_risk=str(portfolio_result.get("correlation_risk", "LOW")),
+    )
+    learning_engine = LearningMemoryEngine()
+    learning_engine.record_trade(
+        symbol=symbol,
+        signal=signal,
+        market_regime=str(market_regime.get("regime", "UNKNOWN")),
+        ai_score=float(adaptive.get("adaptive_score", 0.0)),
+        risk_level=learning_status.level,
+        correlation_risk=str(portfolio_result.get("correlation_risk", "LOW")),
+        directional_bias=str(portfolio_result.get("directional_bias", "NEUTRAL")),
+        trade_result="OPEN",
+        pnl=expected_profit,
+        timeframe="H1",
+    )
+    LOGGER.info("[LEARNING REPORT]\n%s", learning_engine.build_report())
 
     telegram = TelegramService(settings.TELEGRAM_BOT_TOKEN, settings.TELEGRAM_CHAT_ID)
     message = (
