@@ -42,8 +42,8 @@ def build_telegram_caption(
     adaptive: dict[str, Any],
     market_regime: dict[str, Any],
     portfolio_result: dict[str, Any],
+    adaptive_ai: dict[str, Any] | None = None,
 ) -> str:
-    """Build natural-language Vietnamese caption for Telegram chart alerts."""
     ai_score = _as_float(adaptive.get("adaptive_score"))
     dynamic_risk = _as_float(portfolio_result.get("dynamic_risk"))
     portfolio_heat = _as_float(portfolio_result.get("portfolio_heat"))
@@ -66,32 +66,45 @@ def build_telegram_caption(
     corr_explain = explain_correlation_risk(correlation_risk)
     bias_explain = explain_directional_bias(directional_bias)
 
+    adaptive_section = ""
+    if adaptive_ai:
+        adaptive_section = (
+            f"\n\n{AI_ICON} AI THICH NGHI\n"
+            f"{SEPARATOR}\n"
+            f"{CHECK_ICON} Adaptive Confidence: {float(adaptive_ai.get('adaptive_confidence', 0.0)):.2f}/100\n"
+            f"🌍 Market Alignment: {adaptive_ai.get('market_alignment', 'UNKNOWN')}\n"
+            f"💎 Strongest Symbol: {adaptive_ai.get('strongest_symbol', 'UNKNOWN')}\n"
+            f"⚠️ Dangerous Regime: {adaptive_ai.get('dangerous_regime', 'UNKNOWN')}\n"
+            f"✅ Adaptive Status: {adaptive_ai.get('adaptive_status', 'UNKNOWN')}"
+        )
+
     return (
         f"{HEADER_TEMPLATE.format(fire=FIRE_ICON)}\n\n"
-        f"{RISK_ICON} Cặp tiền: {symbol}\n"
-        f"{TREND_ICON} Xu hướng: {signal}\n\n"
+        f"{RISK_ICON} Cap tien: {symbol}\n"
+        f"{TREND_ICON} Xu huong: {signal}\n\n"
         f"{MONEY_ICON} Entry: {trade_levels.get('entry', 0.0):.5f}\n"
-        f"🛑 Cắt lỗ: {trade_levels.get('stop_loss', 0.0):.5f}\n"
-        f"🎯 Chốt lời: {trade_levels.get('take_profit', 0.0):.5f}\n\n"
-        f"{AI_ICON} ĐÁNH GIÁ AI\n"
+        f"🛑 Cat lo: {trade_levels.get('stop_loss', 0.0):.5f}\n"
+        f"🎯 Chot loi: {trade_levels.get('take_profit', 0.0):.5f}\n\n"
+        f"{AI_ICON} DANH GIA AI\n"
         f"{SEPARATOR}\n"
-        f"{CHECK_ICON} Điểm AI: {ai_score:.2f}/100\n"
-        f"⚖️ Độ tự tin AI: {ai_confidence}\n"
-        f"🌍 Trạng thái thị trường: {regime}\n"
+        f"{CHECK_ICON} Diem AI: {ai_score:.2f}/100\n"
+        f"⚖️ Do tu tin AI: {ai_confidence}\n"
+        f"🌍 Trang thai thi truong: {regime}\n"
         f"{BRAIN_ICON} {ai_signal_text}\n\n"
-        f"{WARNING_ICON} RỦI RO\n"
+        f"{WARNING_ICON} RUI RO\n"
         f"{SEPARATOR}\n"
-        f"{FIRE_ICON} Nhiệt danh mục: {portfolio_heat:.2f}%\n"
-        f"{MONEY_ICON} Rủi ro động: {dynamic_risk:.2f}%\n"
-        f"🔗 Tương quan lệnh: {correlation_risk}\n"
-        f"📦 Trạng thái danh mục: {directional_bias}\n"
+        f"{FIRE_ICON} Nhiet danh muc: {portfolio_heat:.2f}%\n"
+        f"{MONEY_ICON} Rui ro dong: {dynamic_risk:.2f}%\n"
+        f"🔗 Tuong quan lenh: {correlation_risk}\n"
+        f"📦 Trang thai danh muc: {directional_bias}\n"
         f"• {heat_explain}\n"
         f"• {dynamic_explain}\n"
         f"• {corr_explain}\n"
         f"• {bias_explain}\n\n"
-        f"{status_icon} KẾT LUẬN\n"
+        f"{status_icon} KET LUAN\n"
         f"{SEPARATOR}\n"
         f"{BRAIN_ICON} {status.reason}\n"
-        f"{status_icon} Mức cảnh báo: {status.level}\n"
-        f"{TIME_ICON} Khung thời gian: H1"
+        f"{status_icon} Muc canh bao: {status.level}\n"
+        f"{TIME_ICON} Khung thoi gian: H1"
+        f"{adaptive_section}"
     )

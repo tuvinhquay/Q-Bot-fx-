@@ -32,6 +32,8 @@ from backend.services.telegram.formatter import build_telegram_caption
 from backend.services.telegram.status_engine import classify_alert_status
 from backend.services.learning.memory_engine import LearningMemoryEngine
 from backend.services.capital.capital_manager import CapitalManager
+from backend.services.adaptive_ai.adaptive_engine import AdaptiveIntelligenceEngine
+from backend.services.adaptive_ai.adaptive_report import build_adaptive_report, build_adaptive_summary_for_telegram
 from config.settings import FORCE_SIGNAL_MODE, FORCE_SIGNAL_SYMBOL, FORCE_SIGNAL_TYPE, Settings
 
 LOGGER = logging.getLogger(__name__)
@@ -117,6 +119,27 @@ def run_signal_pipeline(settings: Settings) -> str | None:
         LOGGER.info("[AI DECISION] Market filtered out")
         signal = "HOLD"
     LOGGER.info("[DYNAMIC RISK] adjusted risk=%.2f%%", portfolio_result["dynamic_risk"])
+    adaptive_ai_engine = AdaptiveIntelligenceEngine()
+    adaptive_ai_state = adaptive_ai_engine.evaluate(
+        symbol=symbol,
+        market_regime=str(market_regime.get("regime", "UNKNOWN")),
+        base_confidence=float(adaptive.get("adaptive_score", 50.0)),
+        capital_state={
+            "survival_mode": False,
+            "consecutive_losses": 0,
+            "market_danger_score": 50.0,
+        },
+        volatility_score=float(market_regime.get("volatility_score", 0.5) or 0.5),
+    )
+    LOGGER.info(
+        "[ADAPTIVE AI] confidence=%.2f status=%s allow_trade=%s",
+        adaptive_ai_state["adaptive_confidence"],
+        adaptive_ai_state["adaptive_status"],
+        adaptive_ai_state["allow_trade"],
+    )
+    if not adaptive_ai_state["allow_trade"]:
+        LOGGER.info("[ADAPTIVE AI] Trade blocked by self-protection layer.")
+        signal = "HOLD"
 
     # ===== SEND TELEGRAM ALERT =====
     if signal in ["BUY", "SELL"]:
@@ -149,6 +172,7 @@ def run_signal_pipeline(settings: Settings) -> str | None:
             adaptive=adaptive,
             market_regime=market_regime,
             portfolio_result=portfolio_result,
+            adaptive_ai=build_adaptive_summary_for_telegram(adaptive_ai_state),
         )
         LOGGER.info("[TELEGRAM] Caption built successfully")
 
@@ -195,11 +219,13 @@ def run_signal_pipeline(settings: Settings) -> str | None:
         floating_drawdown_pct=daily_drawdown_pct,
     )
     risk.risk_per_trade = capital_state["allocated_risk_percent"] / 100.0
+    risk.risk_per_trade *= float(adaptive_ai_state.get("risk_multiplier", 1.0))
     LOGGER.info(
         "[CAPITAL] survival=%s allocated_risk=%.2f%%",
         capital_state["survival_mode"],
         capital_state["allocated_risk_percent"],
     )
+    LOGGER.info("[ADAPTIVE AI] risk multiplier=%.2f", float(adaptive_ai_state.get("risk_multiplier", 1.0)))
     lot = risk.calculate_lot_size(balance, risk.default_stop_loss_pips)
     LOGGER.info("Calculated lot size: %s", lot)
 
@@ -264,3 +290,4 @@ def run_signal_pipeline(settings: Settings) -> str | None:
 
     notifier = TelegramNotifier(settings)
     notifier.send(capital_state["capital_report"])
+    notifier.send(build_adaptive_report(adaptive_ai_state))

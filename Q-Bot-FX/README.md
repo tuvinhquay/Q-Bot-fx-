@@ -110,3 +110,42 @@ python backend/main.py --once
 - Tich hop capital mode vao strategy selection theo symbol
 - Mo rong allocation theo multi-symbol portfolio heat
 - Nang cap confidence engine voi trong so regime thong minh hon
+
+## Prompt 27 Milestone - AI Adaptive Intelligence Engine
+
+Prompt 27 bo sung tang Adaptive Intelligence de bot dung tri nho cho quyet dinh song con.
+He thong nay tach biet khoi execution core va MT5 order placement.
+
+### Architecture moi
+
+- `backend/services/adaptive_ai/adaptive_engine.py`: trung tam tong hop adaptive score
+- `regime_memory.py`: regime learning + luu an toan vao `data/adaptive_memory.json`
+- `symbol_behavior.py`: theo doi quality tung symbol
+- `confidence_adjuster.py`: tu dong tang/ha confidence
+- `opportunity_ranker.py`: xep hang co hoi giao dich
+- `self_protection.py`: block trade/cooldown/risk multiplier
+- `adaptive_report.py`: adaptive report cho terminal va Telegram
+
+### Adaptive behaviors
+
+- Nho regime tot/xau va uu tien regime phu hop
+- Danh gia symbol manh/yeu de uu tien setup
+- Tu dong giam confidence khi loss streak, volatility cao, survival mode bat
+- Tu dong block trade khi confidence qua thap hoac danger qua cao
+- Tang tuong thich voi Prompt 26 qua risk multiplier self-protection
+
+### Test command Prompt 27
+
+```bash
+python -m py_compile backend
+python backend/services/adaptive_ai/test_adaptive_ai.py
+python backend/services/learning/test_learning.py
+python backend/services/capital/test_capital_manager.py
+python backend/main.py --once
+```
+
+### Roadmap Prompt 28
+
+- Adaptive selection theo multi-symbol scanner
+- Meta-learning cho regime transition
+- Tu dong can bang co hoi va risk tren portfolio rong hon
