@@ -31,6 +31,7 @@ from backend.services.telegram_service import TelegramService
 from backend.services.telegram.formatter import build_telegram_caption
 from backend.services.telegram.status_engine import classify_alert_status
 from backend.services.learning.memory_engine import LearningMemoryEngine
+from backend.services.capital.capital_manager import CapitalManager
 from config.settings import FORCE_SIGNAL_MODE, FORCE_SIGNAL_SYMBOL, FORCE_SIGNAL_TYPE, Settings
 
 LOGGER = logging.getLogger(__name__)
@@ -182,7 +183,23 @@ def run_signal_pipeline(settings: Settings) -> str | None:
         LOGGER.warning("Daily loss limit reached, stopping trading for today.")
         return "Daily loss limit reached"
 
-    risk.risk_per_trade = portfolio_result["dynamic_risk"] / 100.0
+    reference_balance = float(getattr(risk, "account_balance", balance) or balance)
+    daily_drawdown_pct = ((float(balance) - reference_balance) / reference_balance * 100.0) if reference_balance else 0.0
+    capital_manager = CapitalManager()
+    capital_state = capital_manager.evaluate(
+        base_risk_percent=float(portfolio_result["dynamic_risk"]),
+        market_regime=str(market_regime.get("regime", "UNKNOWN")),
+        volatility_score=float(market_regime.get("volatility_score", 0.5) or 0.5),
+        daily_drawdown_pct=daily_drawdown_pct,
+        weekly_drawdown_pct=daily_drawdown_pct,
+        floating_drawdown_pct=daily_drawdown_pct,
+    )
+    risk.risk_per_trade = capital_state["allocated_risk_percent"] / 100.0
+    LOGGER.info(
+        "[CAPITAL] survival=%s allocated_risk=%.2f%%",
+        capital_state["survival_mode"],
+        capital_state["allocated_risk_percent"],
+    )
     lot = risk.calculate_lot_size(balance, risk.default_stop_loss_pips)
     LOGGER.info("Calculated lot size: %s", lot)
 
@@ -244,3 +261,6 @@ def run_signal_pipeline(settings: Settings) -> str | None:
         notifier = TelegramNotifier(settings)
         notifier.send(report)
         mark_daily_report_sent()
+
+    notifier = TelegramNotifier(settings)
+    notifier.send(capital_state["capital_report"])

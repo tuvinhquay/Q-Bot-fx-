@@ -67,3 +67,46 @@ python backend/main.py --once
 - Nang cap tu memory thong ke sang adaptive AI tu dong dieu chinh theo regime
 - Toi uu confidence model dua tren ket qua thuc te
 - Mo rong learning feedback loop theo nhieu timeframe
+
+## Prompt 26 Milestone - Smart Capital Manager
+
+Prompt 26 nang cap bot tu "co tri nho" len "co ban nang sinh ton von" bang mot capital intelligence layer tach biet.
+Layer nay khong sua TradeExecutor core, MT5 execution, portfolio logic Prompt 23, telegram foundation Prompt 24, hoac learning core Prompt 25.
+
+### Thanh phan moi
+
+- Smart Capital Manager (`backend/services/capital/capital_manager.py`)
+- Drawdown Guard: warning/danger/emergency theo nguong -3/-5/-8
+- Survival Mode: tu dong chuyen DEFENSIVE khi drawdown cao, loss streak lon, volatility cao
+- Confidence Engine: confidence/emotional risk/market danger score
+- Recovery Engine: risk ladder sau chuoi thua (0.3 -> 0.6)
+- Smart Risk Allocator: toi uu risk trong hard safety cap
+- Capital Report: thong diep tu nhien de gui Telegram
+
+### Bot bao ve von nhu the nao
+
+- Theo doi drawdown ngay/tuan/floating
+- Giam risk va lot khi nguy hiem
+- Han che overtrading thong qua allocator va recovery ladder
+- Giu che do phong thu cho den khi dieu kien thi truong on dinh hon
+
+### Dynamic Risk Evolution
+
+- Risk co the giam manh khi danger (vi du 1.0% -> 0.4%-0.5%)
+- Risk tang nhe khi on dinh va confidence cao (vi du 1.0% -> 1.3%)
+- Luon ton tai safety cap de tranh vuot qua muc nguy hiem
+
+### Test command Prompt 26
+
+```bash
+python -m py_compile backend
+python backend/services/capital/test_capital_manager.py
+python backend/services/learning/test_learning.py
+python backend/main.py --once
+```
+
+### Roadmap Prompt 27
+
+- Tich hop capital mode vao strategy selection theo symbol
+- Mo rong allocation theo multi-symbol portfolio heat
+- Nang cap confidence engine voi trong so regime thong minh hon
