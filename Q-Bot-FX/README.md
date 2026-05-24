@@ -230,3 +230,49 @@ python -m py_compile backend
 python backend/services/session_ai/test_session_ai.py
 python backend/main.py --once
 ```
+
+## Prompt 30 Milestone - AI Patience & Execution Intelligence
+
+Prompt 30 bo sung execution intelligence layer de bot khong vao lenh ngay khi co signal.
+
+### Modules moi
+
+- `backend/services/execution_ai/patience_engine.py`
+- `backend/services/execution_ai/entry_optimizer.py`
+- `backend/services/execution_ai/candle_confirmation.py`
+- `backend/services/execution_ai/fomo_detector.py`
+- `backend/services/execution_ai/execution_cooldown.py`
+- `backend/services/execution_ai/execution_report.py`
+- `backend/services/execution_ai/test_execution_ai.py`
+
+### Nang luc moi
+
+- Cho candle confirm truoc execution
+- Phat hien va ne FOMO/chase price
+- Danh gia RR va quality entry
+- Kich hoat cooldown khi market nguy hiem
+- Delay/block execution neu timing xau, spread xau, fake volatility cao
+
+### Integration
+
+Flow moi:
+Signal -> Adaptive AI -> Session AI -> Execution AI -> Risk Manager -> Order Placement
+
+### Compatibility
+
+- Khong sua TradeExecutor core
+- Khong sua MT5 order placement logic
+- Khong pha Prompt 23 -> 29
+
+### Test command Prompt 30
+
+```bash
+python -m py_compile backend
+python backend/services/execution_ai/test_execution_ai.py
+python backend/main.py --once
+python backend/services/session_ai/test_session_ai.py
+python backend/services/multi_symbol_ai/test_multi_symbol_ai.py
+python backend/services/adaptive_ai/test_adaptive_ai.py
+python backend/services/learning/test_learning.py
+python backend/services/capital/test_capital_manager.py
+```

@@ -43,6 +43,7 @@ def build_telegram_caption(
     market_regime: dict[str, Any],
     portfolio_result: dict[str, Any],
     adaptive_ai: dict[str, Any] | None = None,
+    execution_ai: dict[str, Any] | None = None,
 ) -> str:
     ai_score = _as_float(adaptive.get("adaptive_score"))
     dynamic_risk = _as_float(portfolio_result.get("dynamic_risk"))
@@ -78,6 +79,18 @@ def build_telegram_caption(
             f"✅ Adaptive Status: {adaptive_ai.get('adaptive_status', 'UNKNOWN')}"
         )
 
+    execution_section = ""
+    if execution_ai:
+        execution_section = (
+            f"\n\n{AI_ICON} EXECUTION AI\n"
+            f"{SEPARATOR}\n"
+            f"⏳ Patience score: {float(execution_ai.get('patience_score', 0.0)):.2f}\n"
+            f"🎯 RR score: {float(execution_ai.get('rr_score', 0.0)):.2f}\n"
+            f"⚠️ FOMO: {execution_ai.get('fomo_severity', 'N/A')}\n"
+            f"📈 Candle: {execution_ai.get('candle_strength', 'N/A')}\n"
+            f"✅ Decision: {execution_ai.get('decision', 'WAIT')} ({execution_ai.get('reason', 'N/A')})"
+        )
+
     return (
         f"{HEADER_TEMPLATE.format(fire=FIRE_ICON)}\n\n"
         f"{RISK_ICON} Cap tien: {symbol}\n"
@@ -107,4 +120,5 @@ def build_telegram_caption(
         f"{status_icon} Muc canh bao: {status.level}\n"
         f"{TIME_ICON} Khung thoi gian: H1"
         f"{adaptive_section}"
+        f"{execution_section}"
     )

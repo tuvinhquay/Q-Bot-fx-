@@ -42,6 +42,12 @@ from backend.services.session_ai.spread_guard import evaluate_spread, is_rollove
 from backend.services.session_ai.timing_report import build_session_report
 from backend.services.session_ai.timing_score import compute_timing_score
 from backend.services.session_ai.volatility_trap import detect_volatility_trap
+from backend.services.execution_ai.candle_confirmation import evaluate_candle_confirmation
+from backend.services.execution_ai.entry_optimizer import optimize_entry
+from backend.services.execution_ai.execution_cooldown import evaluate_cooldown
+from backend.services.execution_ai.execution_report import build_execution_report
+from backend.services.execution_ai.fomo_detector import detect_fomo
+from backend.services.execution_ai.patience_engine import evaluate_patience
 from config.settings import FORCE_SIGNAL_MODE, FORCE_SIGNAL_SYMBOL, FORCE_SIGNAL_TYPE, Settings
 
 LOGGER = logging.getLogger(__name__)
@@ -196,6 +202,51 @@ def run_signal_pipeline(settings: Settings) -> str | None:
         LOGGER.info("[ADAPTIVE AI] Trade blocked by self-protection layer.")
         signal = "HOLD"
 
+    # ===== EXECUTION AI =====
+    entry_preview = float(candles["close"].iloc[-1]) if not candles.empty else 0.0
+    candle_state = evaluate_candle_confirmation(candles)
+    entry_state = optimize_entry(
+        entry=entry_preview,
+        stop_loss=float(signal_sl),
+        take_profit=float(signal_tp),
+        trap_score=float(trap_state["trap_score"]),
+    )
+    fomo_state = detect_fomo(
+        current_price=entry_preview,
+        suggested_entry=float(entry_state["optimized_entry"]),
+        spread_quality=str(spread_state["spread_quality"]),
+        trap_score=float(trap_state["trap_score"]),
+    )
+    cooldown_state = evaluate_cooldown(
+        loss_streak=int(capital_state["consecutive_losses"]) if "capital_state" in locals() else 0,
+        emotional_risk_score=float(capital_state["emotional_risk_score"]) if "capital_state" in locals() else 50.0,
+        market_danger_score=float(capital_state["market_danger_score"]) if "capital_state" in locals() else 50.0,
+    )
+    patience_state = evaluate_patience(
+        adaptive_score=float(adaptive.get("adaptive_score", 50.0)),
+        timing_score=float(timing_state["timing_score"]),
+        trap_score=float(trap_state["trap_score"]),
+        spread_quality=str(spread_state["spread_quality"]),
+        confidence_score=float(adaptive_ai_state.get("adaptive_confidence", 50.0)),
+        candle_confirmed=bool(candle_state["confirmed"]),
+        loss_streak=int(cooldown_state["remaining_cycles"]),
+        market_danger_score=float(capital_state["market_danger_score"]) if "capital_state" in locals() else 50.0,
+    )
+    execution_ai_state = {
+        **patience_state,
+        "rr_score": entry_state["rr_score"],
+        "candle_strength": candle_state["strength"],
+        "fomo_severity": fomo_state["severity"],
+    }
+    LOGGER.info("[EXECUTION AI] decision=%s reason=%s", patience_state["decision"], patience_state["reason"])
+    LOGGER.info("[PATIENCE SCORE] %.2f", float(patience_state["patience_score"]))
+    LOGGER.info("[FOMO DETECTED] %s (%s)", fomo_state["fomo_detected"], fomo_state["severity"])
+    LOGGER.info("[COOLDOWN ACTIVE] %s (%s)", cooldown_state["cooldown_active"], cooldown_state["remaining_cycles"])
+    if bool(cooldown_state["cooldown_active"]):
+        signal = "HOLD"
+    if not bool(patience_state["allow_execution"]):
+        signal = "HOLD"
+
     # ===== SEND TELEGRAM ALERT =====
     if signal in ["BUY", "SELL"]:
         notifier = TelegramNotifier(settings)
@@ -228,6 +279,7 @@ def run_signal_pipeline(settings: Settings) -> str | None:
             market_regime=market_regime,
             portfolio_result=portfolio_result,
             adaptive_ai=build_adaptive_summary_for_telegram(adaptive_ai_state),
+            execution_ai=execution_ai_state,
         )
         LOGGER.info("[TELEGRAM] Caption built successfully")
 
@@ -350,4 +402,5 @@ def run_signal_pipeline(settings: Settings) -> str | None:
     notifier.send(build_adaptive_report(adaptive_ai_state))
     notifier.send(build_top_setup_report(brain_state))
     notifier.send(build_session_report(session_state))
+    notifier.send(build_execution_report(execution_ai_state))
 
