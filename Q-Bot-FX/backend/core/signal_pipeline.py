@@ -34,6 +34,8 @@ from backend.services.learning.memory_engine import LearningMemoryEngine
 from backend.services.capital.capital_manager import CapitalManager
 from backend.services.adaptive_ai.adaptive_engine import AdaptiveIntelligenceEngine
 from backend.services.adaptive_ai.adaptive_report import build_adaptive_report, build_adaptive_summary_for_telegram
+from backend.services.multi_symbol_ai.portfolio_brain import MultiSymbolPortfolioBrain
+from backend.services.multi_symbol_ai.reporting import build_top_setup_report
 from config.settings import FORCE_SIGNAL_MODE, FORCE_SIGNAL_SYMBOL, FORCE_SIGNAL_TYPE, Settings
 
 LOGGER = logging.getLogger(__name__)
@@ -57,7 +59,22 @@ def run_signal_pipeline(settings: Settings) -> str | None:
     candles = get_latest_market_data(connector)
     LOGGER.info("Fetched candles: %s", len(candles))
 
-    symbol = settings.SYMBOLS[0]
+    initial_symbols = settings.SYMBOLS[: min(8, len(settings.SYMBOLS))]
+    volatility_map: dict[str, float] = {}
+    for s in initial_symbols:
+        rates = connector.get_rates(symbol=s, timeframe=mt5.TIMEFRAME_H1, n=80)
+        if rates is None or rates.empty:
+            volatility_map[s] = 0.6
+        else:
+            returns = rates["close"].pct_change().dropna()
+            volatility_map[s] = float(returns.std()) * 100 if not returns.empty else 0.6
+            volatility_map[s] = max(0.1, min(volatility_map[s], 1.0))
+    portfolio_brain = MultiSymbolPortfolioBrain()
+    brain_state = portfolio_brain.evaluate(initial_symbols, volatility_map)
+    symbol = brain_state.get("top_symbol") or settings.SYMBOLS[0]
+    LOGGER.info("[PORTFOLIO OPPORTUNITY] top symbol=%s", symbol)
+    if brain_state.get("ranking"):
+        LOGGER.info("[PORTFOLIO OPPORTUNITY] top score=%.2f", float(brain_state["ranking"][0]["opportunity_score"]))
     if FORCE_SIGNAL_MODE and symbol == FORCE_SIGNAL_SYMBOL:
         LOGGER.warning("FORCE SIGNAL MODE ENABLED")
         signal = FORCE_SIGNAL_TYPE
@@ -291,3 +308,4 @@ def run_signal_pipeline(settings: Settings) -> str | None:
     notifier = TelegramNotifier(settings)
     notifier.send(capital_state["capital_report"])
     notifier.send(build_adaptive_report(adaptive_ai_state))
+    notifier.send(build_top_setup_report(brain_state))

@@ -149,3 +149,47 @@ python backend/main.py --once
 - Adaptive selection theo multi-symbol scanner
 - Meta-learning cho regime transition
 - Tu dong can bang co hoi va risk tren portfolio rong hon
+
+## Prompt 28 Milestone - Multi-Symbol AI Brain
+
+Prompt 28 nang cap Q-Bot-FX thanh AI Portfolio Brain: nhin nhieu symbol cung luc, xep hang co hoi toan market, va uu tien von thong minh.
+
+### Thanh phan moi
+
+- Multi-Symbol Ranking Engine (`backend/services/multi_symbol_ai/ranking_engine.py`)
+- Smart Capital Distribution (`capital_distribution.py`)
+- Cross-Market Awareness (`cross_market.py`)
+- AI Priority Queue (`priority_queue.py`)
+- Portfolio Brain Orchestrator (`portfolio_brain.py`)
+- Telegram/Terminal Reporting (`reporting.py`)
+
+### Nang luc moi
+
+- Xep hang setup manh nhat trong nhieu symbol
+- Chon symbol uu tien thay vi co dinh symbol dau tien
+- Uu tien von theo chat luong co hoi (opportunity-weighted)
+- Co cross-market insight (vi du xu huong USD tren nhieu cap)
+- Gui Telegram "TOP SETUP HOM NAY" va ly do loai bo setup yeu
+
+### Compatibility va Risk impact
+
+- Khong sua execution core va MT5 order placement
+- Khong pha Prompt 23-27
+- Chi inject lop portfolio opportunity truoc khi tao signal va gui report
+
+### Test command Prompt 28
+
+```bash
+python -m py_compile backend
+python backend/services/multi_symbol_ai/test_multi_symbol_ai.py
+python backend/services/adaptive_ai/test_adaptive_ai.py
+python backend/services/learning/test_learning.py
+python backend/services/capital/test_capital_manager.py
+python backend/main.py --once
+```
+
+### Future extensibility
+
+- De mo rong Prompt 29+ cho execution timing theo top setup
+- De ket hop session intelligence va market-cycle prediction
+- De nang cap thanh autonomous portfolio optimization
