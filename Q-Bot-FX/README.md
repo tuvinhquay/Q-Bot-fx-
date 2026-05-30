@@ -276,3 +276,67 @@ python backend/services/adaptive_ai/test_adaptive_ai.py
 python backend/services/learning/test_learning.py
 python backend/services/capital/test_capital_manager.py
 ```
+
+## Prompt 31 Milestone - Deployment & Cloud Backup System
+
+Prompt 31 adds the deployment safety layer for Q-Bot-FX. It prepares the bot for safer demo/live operation by protecting AI data, checking disk usage, preparing restore points, and laying the foundation for Firebase/VPS/EXE workflows.
+
+### New Deployment Modules
+
+- `backend/services/deployment/backup_manager.py`: local backup, restore, list, cleanup
+- `backend/services/deployment/firebase_backup.py`: Firebase upload/download/verify adapter
+- `backend/services/deployment/firebase_quota_guard.py`: free-tier upload/download/storage quota guard
+- `backend/services/deployment/storage_guard.py`: disk usage monitoring
+- `backend/services/deployment/file_rotation.py`: rotate generated files by age/count
+- `backend/services/deployment/data_compressor.py`: compress old JSON data
+- `backend/services/deployment/recovery_manager.py`: integrity check and restore from latest backup
+- `backend/services/deployment/deployment_report.py`: deployment and backup status report
+
+### Backup Scope
+
+The deployment layer protects AI runtime data such as:
+
+- `learning_memory.json`
+- `adaptive_memory.json`
+- `trade_history.json`
+- `capital_state.json`
+- `session_memory.json`
+
+Backups are stored under `backups/` as zip recovery points. Runtime zip files are not committed.
+
+### Firebase Sync
+
+Firebase support is dependency-light and client-injectable. Without a configured Firebase client, the system safely reports `local-only` mode instead of crashing.
+
+### Storage Guard
+
+Disk usage is monitored with warning/danger thresholds:
+
+- above 80 percent: warning
+- above 90 percent: cleanup recommended
+
+### Recovery Manager
+
+On integrity failure, corrupted JSON runtime data can be restored from the newest local backup.
+
+### EXE Build Guide
+
+Install PyInstaller, then run:
+
+```bash
+python build_exe.py
+```
+
+Target output:
+
+```text
+QBotFX.exe
+```
+
+### Test command Prompt 31
+
+```bash
+python -m py_compile backend
+python backend/services/deployment/test_backup.py
+python backend/main.py --once
+```
