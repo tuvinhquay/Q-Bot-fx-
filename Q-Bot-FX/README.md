@@ -340,3 +340,85 @@ python -m py_compile backend
 python backend/services/deployment/test_backup.py
 python backend/main.py --once
 ```
+
+## Prompt 32 Milestone - Self-Contained EXE Deployment Automation
+
+Prompt 32 upgrades the deployment layer so a successful EXE build prepares a usable runtime folder automatically.
+
+### Self-Contained Dist Layout
+
+After running:
+
+```bash
+python build_exe.py
+```
+
+the build script prepares:
+
+```text
+dist/
+QBotFX.exe
+.env
+data/
+logs/
+backups/
+charts/
+runtime/
+build_report.txt
+```
+
+If PyInstaller is missing or the build fails, the script still creates the deployment folder and `build_report.txt` with a failed status so troubleshooting is clear.
+
+### Runtime Checker
+
+`backend/services/deployment/runtime_checker.py` checks:
+
+- MT5 terminal visibility
+- `.env`
+- `data/`
+- `logs/`
+- `backups/`
+- important config keys: `GEMINI_API_KEY`, `TELEGRAM_BOT_TOKEN`, `MT5_LOGIN`
+
+At startup, Q-Bot-FX prints:
+
+```text
+[STARTUP CHECK] OK
+```
+
+or:
+
+```text
+[STARTUP CHECK] WARNING
+```
+
+Warnings do not crash the bot.
+
+### Auto Log Rotation
+
+`backend/services/deployment/log_rotation.py` archives logs larger than 10MB and keeps up to 30 archived log files.
+
+### Backup Automation
+
+The build process creates `daily_backup.zip` under `dist/backups/` for runtime memory files when available.
+
+### Troubleshooting
+
+- Missing PyInstaller: run `pip install pyinstaller`
+- Missing `.env`: create `.env` before build if you want it copied into `dist/`
+- Missing MT5 warning: set `MT5_TERMINAL_PATH` or install MetaTrader 5 in a standard folder
+- Build failed but dist exists: inspect `dist/build_report.txt`
+
+### Test command Prompt 32
+
+```bash
+python -m py_compile backend
+python backend/services/deployment/test_backup.py
+python backend/main.py --once
+python backend/services/learning/test_learning.py
+python backend/services/capital/test_capital_manager.py
+python backend/services/adaptive_ai/test_adaptive_ai.py
+python backend/services/multi_symbol_ai/test_multi_symbol_ai.py
+python backend/services/session_ai/test_session_ai.py
+python backend/services/execution_ai/test_execution_ai.py
+```

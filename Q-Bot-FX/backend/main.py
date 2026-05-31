@@ -14,6 +14,7 @@ if str(BASE_DIR) not in sys.path:
 
 from backend.core.scheduler import start_trading_loop
 from backend.mt5.connector import MT5Connector
+from backend.services.deployment.runtime_checker import check_runtime_environment, format_runtime_report
 from config.settings import Settings
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(message)s")
@@ -37,6 +38,13 @@ def main() -> None:
     RUN_ONCE = "--once" in sys.argv
 
     print("Q-Bot-FX starting...")
+    runtime_state = check_runtime_environment(BASE_DIR)
+    if runtime_state["status"] == "PASS":
+        print("[STARTUP CHECK] OK")
+    else:
+        print("[STARTUP CHECK] WARNING")
+        print(format_runtime_report(runtime_state))
+
     if RUN_ONCE:
         print("TEST MODE: run once then exit")
     else:

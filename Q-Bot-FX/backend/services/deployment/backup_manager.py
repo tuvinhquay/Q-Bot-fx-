@@ -41,6 +41,13 @@ class BackupManager:
     def backup_now(self) -> dict[str, object]:
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H%M%S")
         archive_path = self.backup_dir / f"{timestamp}.zip"
+        return self._write_archive(archive_path)
+
+    def backup_daily(self) -> dict[str, object]:
+        archive_path = self.backup_dir / "daily_backup.zip"
+        return self._write_archive(archive_path)
+
+    def _write_archive(self, archive_path: Path) -> dict[str, object]:
         targets = self._existing_targets()
         with ZipFile(archive_path, "w", compression=ZIP_DEFLATED) as archive:
             for path in targets:

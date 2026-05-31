@@ -18,7 +18,9 @@ from backend.services.deployment.deployment_report import build_deployment_repor
 from backend.services.deployment.file_rotation import rotate_files
 from backend.services.deployment.firebase_backup import FirebaseBackup
 from backend.services.deployment.firebase_quota_guard import evaluate_firebase_quota
+from backend.services.deployment.log_rotation import rotate_logs
 from backend.services.deployment.recovery_manager import RecoveryManager
+from backend.services.deployment.runtime_checker import check_runtime_environment, format_runtime_report
 from backend.services.deployment.storage_guard import disk_usage
 
 
@@ -33,6 +35,7 @@ def main() -> None:
 
     manager = BackupManager(project_root=sandbox, backup_dir=sandbox / "backups")
     backup = manager.backup_now()
+    daily = manager.backup_daily()
     backups = manager.list_backups()
     quota = evaluate_firebase_quota(storage_usage_percent=20, upload_count=5, download_count=8)
     firebase = FirebaseBackup().upload_backup(Path(str(backup["archive"])), quota)
@@ -40,6 +43,11 @@ def main() -> None:
     recovery = RecoveryManager(manager).check_data_integrity()
     compression = compress_json_file(sandbox / "trade_history.json")
     rotation = rotate_files(sandbox / "reports", keep_days=30, max_files=500)
+    runtime = check_runtime_environment(sandbox)
+    log_file = sandbox / "logs" / "qbot.log"
+    log_file.parent.mkdir(exist_ok=True)
+    log_file.write_text("x" * (11 * 1024 * 1024), encoding="utf-8")
+    logs = rotate_logs(log_file.parent, max_size_mb=10, max_files=30)
     report = build_deployment_report(
         backup_ok=bool(backup["success"]),
         firebase_ok=bool(firebase["success"]),
@@ -49,6 +57,7 @@ def main() -> None:
     )
 
     print("[DEPLOYMENT] backup:", backup)
+    print("[DEPLOYMENT] daily:", daily)
     print("[DEPLOYMENT] backups:", [p.name for p in backups])
     print("[DEPLOYMENT] quota:", quota)
     print("[DEPLOYMENT] firebase:", firebase)
@@ -56,6 +65,9 @@ def main() -> None:
     print("[DEPLOYMENT] recovery:", recovery)
     print("[DEPLOYMENT] compression:", compression)
     print("[DEPLOYMENT] rotation:", rotation)
+    print("[DEPLOYMENT] runtime:", runtime)
+    print("[DEPLOYMENT] logs:", logs)
+    print("[RUNTIME REPORT]\n" + format_runtime_report(runtime))
     print("[DEPLOYMENT REPORT]\n" + report)
 
     if sandbox.exists():
