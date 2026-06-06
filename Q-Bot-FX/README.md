@@ -422,3 +422,34 @@ python backend/services/multi_symbol_ai/test_multi_symbol_ai.py
 python backend/services/session_ai/test_session_ai.py
 python backend/services/execution_ai/test_execution_ai.py
 ```
+
+## Prompt 33A Milestone - Foundation Evolution System
+
+Prompt 33A adds operational infrastructure for Q-Bot-FX. It does not change trading logic, order placement, risk management, or AI decision modules.
+
+### New Foundation Modules
+
+- `backend/services/mt5/auto_login_engine.py`: MT5 auto-start, login, retry, and Telegram failure warning
+- `backend/services/mt5/connection_manager.py`: single MT5 connection access point for infrastructure code
+- `backend/services/device/device_health.py`: CPU, RAM, disk, network, uptime, battery report
+- `backend/services/telegram/monitoring_center.py`: command handlers for `/status`, `/device`, `/mt5`, `/balance`, `/equity`, `/open_trades`, `/topsetup`, `/performance`, `/restartbot`
+- `backend/services/heartbeat/heartbeat_engine.py`: 30-minute heartbeat message generator
+- `backend/services/health/health_check.py`: MT5, internet, Telegram, disk, memory, CPU status
+- `backend/services/recovery/crash_guard.py`: exception/disconnect notification and recovery hook
+- `backend/services/node/node_identity.py`: node name, machine name, OS, Python version, bot version, branch
+
+### Startup Report
+
+On startup, Q-Bot-FX sends a best-effort Telegram startup report with branch, version, MT5 status, balance, equity, CPU, RAM, disk, internet, and uptime. Failure to send the report does not stop the bot.
+
+### Alert Levels
+
+- `INFO`
+- `WARNING`
+- `CRITICAL`
+
+### CI Mini Tests
+
+```bash
+python -m pytest tests/test_mt5_auto_login.py tests/test_device_health.py tests/test_monitoring_center.py tests/test_health_check.py
+```

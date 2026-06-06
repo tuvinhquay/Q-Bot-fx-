@@ -14,7 +14,9 @@ if str(BASE_DIR) not in sys.path:
 
 from backend.core.scheduler import start_trading_loop
 from backend.mt5.connector import MT5Connector
+from backend.notifications.telegram_notifier import TelegramNotifier
 from backend.services.deployment.runtime_checker import check_runtime_environment, format_runtime_report
+from backend.services.telegram.monitoring_center import build_startup_report
 from config.settings import Settings
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(message)s")
@@ -63,12 +65,23 @@ def main() -> None:
         return
 
     mt5_connector = MT5Connector(settings)
+    account = {}
     if mt5_connector.connect():
         account = mt5_connector.get_account_info()
         print(f"Balance: {account['balance']} USD")
         print(f"Equity : {account['equity']} USD")
     else:
         print("Unable to read account info from MT5 connector.")
+
+    try:
+        TelegramNotifier(settings).send(
+            build_startup_report(
+                mt5_state={"status": "CONNECTED"},
+                account=account,
+            )
+        )
+    except Exception as error:
+        LOGGER.warning("Startup report failed: %s", error)
 
     # Start continuous trading loop
     start_trading_loop(settings, run_once=RUN_ONCE)
