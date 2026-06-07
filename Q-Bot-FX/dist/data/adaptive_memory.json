@@ -1,0 +1,15 @@
+{
+  "last_state": {
+    "adaptive_confidence": 42.16,
+    "market_alignment": "NEUTRAL",
+    "strategy_strength": "MEDIUM",
+    "adaptive_status": "STABLE",
+    "allow_trade": true,
+    "risk_multiplier": 1.0,
+    "dangerous_regime": "UNKNOWN",
+    "best_regime": "UNKNOWN",
+    "strongest_symbol": "UNKNOWN",
+    "weakest_symbol": "UNKNOWN",
+    "opportunity_score": 57.16
+  }
+}

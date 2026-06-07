@@ -29,6 +29,12 @@ class MT5Connector:
 
     def connect(self) -> bool:
         """Connect to MT5 terminal using credentials from settings."""
+        terminal = mt5.terminal_info()
+        if terminal is not None:
+            LOGGER.info("MT5 already connected - reusing existing session")
+            self.is_connected = True
+            return True
+
         try:
             login = int(self.settings.MT5_LOGIN)
         except ValueError:

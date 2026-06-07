@@ -1,0 +1,13 @@
+[
+  {
+    "timestamp": "2026-05-21T14:13:27.984226",
+    "symbol": "EURUSDm",
+    "signal": "SELL",
+    "lot": 0.01,
+    "entry": 1.082,
+    "sl": 1.084,
+    "tp": 1.078,
+    "profit": 12.5,
+    "result": "WIN"
+  }
+]

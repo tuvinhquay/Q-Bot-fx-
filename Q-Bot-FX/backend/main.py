@@ -8,26 +8,41 @@ from pathlib import Path
 
 import MetaTrader5 as mt5
 
-BASE_DIR = Path(__file__).resolve().parents[1]
+# ===== FIX PYINSTALLER =====
+
+if getattr(sys, "frozen", False):
+    BASE_DIR = Path(sys.executable).parent
+else:
+    BASE_DIR = Path(__file__).resolve().parents[1]
+
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
 from backend.core.scheduler import start_trading_loop
-from backend.mt5.connector import MT5Connector
 from backend.notifications.telegram_notifier import TelegramNotifier
-from backend.services.deployment.runtime_checker import check_runtime_environment, format_runtime_report
+from backend.services.mt5.auto_login_engine import MT5AutoLoginEngine
+from backend.services.deployment.runtime_checker import (
+    check_runtime_environment,
+    format_runtime_report,
+)
 from backend.services.telegram.monitoring_center import build_startup_report
 from config.settings import Settings
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s - %(message)s",
+)
+
+LOGGER = logging.getLogger("QBotFX")
 
 
 def enable_mt5_autotrading() -> None:
     """Verify MT5 connection and ensure AutoTrading is enabled."""
-    if not mt5.initialize():
-        raise RuntimeError("MT5 connection failed")
-
     terminal_info = mt5.terminal_info()
+
+    if not terminal_info:
+        raise RuntimeError("Cannot read MT5 terminal info")
+
     if not terminal_info.trade_allowed:
         raise RuntimeError("Please enable AutoTrading on MT5")
 
@@ -36,18 +51,20 @@ def enable_mt5_autotrading() -> None:
 
 
 def main() -> None:
-    """Main entrypoint for Q-Bot-FX trading engine."""
-    RUN_ONCE = "--once" in sys.argv
+    """Main entrypoint."""
+    run_once = "--once" in sys.argv
 
     print("Q-Bot-FX starting...")
+
     runtime_state = check_runtime_environment(BASE_DIR)
+
     if runtime_state["status"] == "PASS":
         print("[STARTUP CHECK] OK")
     else:
         print("[STARTUP CHECK] WARNING")
         print(format_runtime_report(runtime_state))
 
-    if RUN_ONCE:
+    if run_once:
         print("TEST MODE: run once then exit")
     else:
         print("PRODUCTION MODE: running forever")
@@ -58,20 +75,36 @@ def main() -> None:
         print(f"Settings error: {error}")
         return
 
+    print("Starting MT5 Auto Login Engine...")
+
+    login_result = MT5AutoLoginEngine().connect()
+
+    if not login_result.success:
+        print(f"MT5 Login Failed: {login_result.error}")
+        return
+
+    print("MT5 Auto Login Success")
+    print(f"Account: {login_result.account_login}")
+    print(f"Trade Allowed: {login_result.trade_allowed}")
+
     try:
         enable_mt5_autotrading()
     except RuntimeError as error:
         print(f"MT5 Error: {error}")
         return
 
-    mt5_connector = MT5Connector(settings)
     account = {}
-    if mt5_connector.connect():
-        account = mt5_connector.get_account_info()
+
+    account_info = mt5.account_info()
+    if account_info:
+        account = {
+            "balance": float(account_info.balance),
+            "equity": float(account_info.equity),
+        }
         print(f"Balance: {account['balance']} USD")
         print(f"Equity : {account['equity']} USD")
     else:
-        print("Unable to read account info from MT5 connector.")
+        print("Unable to read account info from MT5.")
 
     try:
         TelegramNotifier(settings).send(
@@ -83,8 +116,10 @@ def main() -> None:
     except Exception as error:
         LOGGER.warning("Startup report failed: %s", error)
 
-    # Start continuous trading loop
-    start_trading_loop(settings, run_once=RUN_ONCE)
+    start_trading_loop(
+        settings,
+        run_once=run_once,
+    )
 
 
 if __name__ == "__main__":
