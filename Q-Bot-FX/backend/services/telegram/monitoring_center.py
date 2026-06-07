@@ -7,6 +7,7 @@ from typing import Any
 
 import MetaTrader5 as mt5
 
+from backend.brain.brain_database import get_brain
 from backend.performance.performance_engine import calculate_performance
 from backend.services.device.device_health import get_device_health
 from backend.services.health.health_check import run_health_check
@@ -214,6 +215,15 @@ def _get_drawdown_info() -> tuple[float, float]:
     return 0.0, 0.0
 
 
+def _get_brain_status() -> dict[str, Any]:
+    """Get brain database status for reporting."""
+    try:
+        brain = get_brain()
+        return brain.get_brain_status()
+    except Exception:
+        return {}
+
+
 def format_alert(level: str, message: str) -> str:
     return f"{level}\n{message}"
 
@@ -247,6 +257,13 @@ def build_startup_report(mt5_state: dict[str, Any] | None = None, account: dict[
     cpu_pct = _validate_percentage(device.cpu_percent)
     ram_pct = _validate_percentage(device.ram_percent)
     disk_pct = _validate_percentage(device.disk_percent)
+
+    brain_status = _get_brain_status()
+    brain_location = brain_status.get("location", "UNKNOWN")
+    brain_size = brain_status.get("size_mb", 0)
+    brain_dbs = brain_status.get("databases", 0)
+    brain_memory = brain_status.get("memory_records", 0)
+    brain_backup = brain_status.get("last_backup", "NONE")
 
     report = (
         f"{HEALTH_ICON} Q-BOT-FX ONLINE\n\n"
@@ -293,6 +310,13 @@ def build_startup_report(mt5_state: dict[str, Any] | None = None, account: dict[
         f"⚡ RISK STATUS\n"
         f"Risk Level: {risk_icon} {risk_level}\n"
         f"Daily Exposure: {daily_exposure:.2f}%\n\n"
+        f"━━━━━━━━━━━━━━━━━━\n\n"
+        f"🧠 BRAIN STATUS\n"
+        f"Location: {brain_location}\n"
+        f"Size: {brain_size} MB\n"
+        f"Databases: {brain_dbs}\n"
+        f"Memory Records: {brain_memory}\n"
+        f"Last Backup: {brain_backup}\n\n"
         f"━━━━━━━━━━━━━━━━━━\n\n"
         f"🎯 Q-BOT READY FOR TRADING\n\n"
         f"Monitoring Version: {MONITORING_VERSION}"
