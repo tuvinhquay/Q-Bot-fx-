@@ -6,3 +6,4 @@ node_modules/
 .next/
 logs/
 .venv/
+Get-ChildItem -Recurse *.db
