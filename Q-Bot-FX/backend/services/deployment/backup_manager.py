@@ -8,17 +8,16 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
-RUNTIME_FILES = [
+RUNTIME_PATTERNS = [
     "learning_memory.json",
     "adaptive_memory.json",
     "trade_history.json",
     "capital_state.json",
     "session_memory.json",
-    "data/learning_memory.json",
-    "data/adaptive_memory.json",
-    "data/trade_history.json",
-    "data/capital_state.json",
-    "data/session_memory.json",
+    "data/*.json",
+    "config/**/*",
+    "logs/**/*",
+    ".env",
 ]
 
 
@@ -32,10 +31,10 @@ class BackupManager:
 
     def _existing_targets(self) -> list[Path]:
         targets: list[Path] = []
-        for relative in RUNTIME_FILES:
-            path = self.project_root / relative
-            if path.exists() and path.is_file():
-                targets.append(path)
+        for pattern in RUNTIME_PATTERNS:
+            for path in self.project_root.glob(pattern):
+                if path.is_file():
+                    targets.append(path)
         return targets
 
     def backup_now(self) -> dict[str, object]:

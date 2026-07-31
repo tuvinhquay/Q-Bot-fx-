@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from backend.services.deployment.backup_manager import BackupManager, RUNTIME_FILES
+from backend.services.deployment.backup_manager import BackupManager, RUNTIME_PATTERNS
 
 
 class RecoveryManager:
@@ -25,10 +25,10 @@ class RecoveryManager:
 
     def check_data_integrity(self) -> dict[str, object]:
         broken: list[str] = []
-        for relative in RUNTIME_FILES:
-            path = self.backup_manager.project_root / relative
-            if not self._is_valid_json(path):
-                broken.append(relative)
+        for pattern in RUNTIME_PATTERNS:
+            for path in self.backup_manager.project_root.glob(pattern):
+                if path.is_file() and path.suffix.lower() == ".json" and not self._is_valid_json(path):
+                    broken.append(str(path.relative_to(self.backup_manager.project_root)))
         if not broken:
             return {"healthy": True, "broken_files": [], "restored": False}
         restore = self.backup_manager.restore_latest()

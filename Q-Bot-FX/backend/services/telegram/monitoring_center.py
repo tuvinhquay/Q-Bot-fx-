@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
+import html
 from datetime import datetime, timezone
 from typing import Any
 
 import MetaTrader5 as mt5
 
 from backend.brain.brain_database import get_brain
+from backend.brain.system_health import get_health
 from backend.performance.performance_engine import calculate_performance
 from backend.services.device.device_health import get_device_health
 from backend.services.health.health_check import run_health_check
 from backend.services.node.node_identity import get_node_identity
+from backend.services.learning.memory_engine import LearningMemoryEngine
 from backend.services.session_ai.session_detector import detect_session
 from backend.services.session_ai.spread_guard import evaluate_spread
 
@@ -142,6 +145,15 @@ def _count_open_positions() -> int:
         return 0
 
 
+def _load_trade_history() -> list[dict[str, Any]]:
+    try:
+        from backend.performance.performance_engine import load_trades
+
+        return load_trades()
+    except Exception:
+        return []
+
+
 def _get_account_metrics(account: dict[str, Any] | None) -> tuple[float, float, float]:
     """Extract account balance, equity, and calculate daily profit."""
     if not account:
@@ -222,6 +234,40 @@ def _get_brain_status() -> dict[str, Any]:
         return brain.get_brain_status()
     except Exception:
         return {}
+
+
+def _summarize_trade_history() -> dict[str, Any]:
+    trades = _load_trade_history()
+    today = datetime.now(timezone.utc).date().isoformat()
+    today_trades = [trade for trade in trades if str(trade.get("timestamp", ""))[:10] == today]
+    wins = sum(1 for trade in today_trades if float(trade.get("profit", 0) or 0) > 0)
+    losses = sum(1 for trade in today_trades if float(trade.get("profit", 0) or 0) <= 0 and today_trades)
+    last_trade = trades[-1] if trades else {}
+
+    return {
+        "orders_today": len(today_trades),
+        "win_count": wins,
+        "loss_count": losses,
+        "last_signal": last_trade.get("signal", "N/A") or "N/A",
+        "last_order": f"{last_trade.get('symbol', 'N/A')} {last_trade.get('signal', 'N/A')}".strip(),
+        "last_error": last_trade.get("error", "N/A") or "N/A",
+        "last_trade_time": last_trade.get("timestamp", "N/A") or "N/A",
+    }
+
+
+def _format_metric(label: str, value: Any) -> str:
+    return f"{label}: {html.escape(str(value))}"
+
+
+def _status_icon(value: str) -> str:
+    normalized = str(value).upper()
+    if normalized in {"OK", "ONLINE", "CONNECTED", "READY", "ACTIVE", "PASS"}:
+        return HEALTH_ICON
+    if normalized in {"WARNING", "DEGRADED"}:
+        return WARNING_ICON
+    if normalized in {"FAIL", "FAILED", "OFFLINE", "DISCONNECTED", "CRITICAL", "ERROR"}:
+        return CRITICAL_ICON
+    return "❔"
 
 
 def format_alert(level: str, message: str) -> str:
@@ -325,15 +371,109 @@ def build_startup_report(mt5_state: dict[str, Any] | None = None, account: dict[
     return report
 
 
+def build_live_dashboard(context: dict[str, Any] | None = None) -> str:
+    """Build a single editable Telegram dashboard message."""
+    context = context or {}
+    identity = get_node_identity()
+    device = get_device_health()
+    health = run_health_check(
+        mt5_connected=str(context.get("mt5", "DISCONNECTED")).upper() == "CONNECTED",
+        telegram_ok=str(context.get("telegram", "ONLINE")).upper() in {"ONLINE", "OK", "CONNECTED"},
+    )
+    performance = calculate_performance() or {}
+    learning_snapshot = LearningMemoryEngine().snapshot()
+    brain_status = _get_brain_status()
+    trade_summary = _summarize_trade_history()
+
+    balance = float(context.get("balance", 0.0) or 0.0)
+    equity = float(context.get("equity", 0.0) or 0.0)
+    floating = float(context.get("floating", equity - balance) or (equity - balance))
+    drawdown = float(context.get("drawdown", performance.get("max_drawdown", 0.0)) or 0.0)
+    win_rate = float(context.get("win_rate", performance.get("winrate", 0.0) * 100.0) or 0.0)
+    loss_count = int(context.get("loss", trade_summary["loss_count"]) or trade_summary["loss_count"])
+    win_count = int(context.get("win", trade_summary["win_count"]) or trade_summary["win_count"])
+    updated_time = context.get("updated_time") or datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+    mt5_status = str(context.get("mt5", "DISCONNECTED"))
+    internet_status = str(context.get("internet", device.network_status))
+    heartbeat_status = str(context.get("heartbeat", "ACTIVE"))
+    ai_status = str(context.get("ai", "ACTIVE"))
+    learning_status = str(context.get("learning", "ACTIVE"))
+    strategy_status = str(context.get("strategy", "ACTIVE"))
+    risk_status = str(context.get("risk", "READY"))
+    trade_executor_status = str(context.get("trade_executor", "READY"))
+    database_status = str(context.get("database", "OK"))
+
+    cpu_pct = _validate_percentage(float(context.get("cpu_percent", device.cpu_percent) or device.cpu_percent))
+    ram_pct = _validate_percentage(float(context.get("ram_percent", device.ram_percent) or device.ram_percent))
+    disk_pct = _validate_percentage(float(context.get("disk_percent", device.disk_percent) or device.disk_percent))
+    uptime_seconds = int(context.get("uptime_seconds", device.system_uptime_seconds) or device.system_uptime_seconds)
+    uptime_str = _format_seconds_as_uptime(uptime_seconds)
+
+    return (
+        f"{HEALTH_ICON} Q-BOT-FX DASHBOARD\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        f"BOT: {identity['bot_version']} | {identity['branch']}\n"
+        f"NODE: {identity['node_name']}\n"
+        f"UPDATED: {html.escape(str(updated_time))}\n\n"
+        f"MT5: {_status_icon(mt5_status)} {html.escape(mt5_status)}\n"
+        f"Internet: {_status_icon(internet_status)} {html.escape(internet_status)}\n"
+        f"Heartbeat: {_status_icon(heartbeat_status)} {html.escape(heartbeat_status)}\n"
+        f"AI: {_status_icon(ai_status)} {html.escape(ai_status)}\n"
+        f"Learning: {_status_icon(learning_status)} {html.escape(learning_status)}\n"
+        f"Strategy: {_status_icon(strategy_status)} {html.escape(strategy_status)}\n"
+        f"Risk: {_status_icon(risk_status)} {html.escape(risk_status)}\n"
+        f"Trade Executor: {_status_icon(trade_executor_status)} {html.escape(trade_executor_status)}\n"
+        f"Database: {_status_icon(database_status)} {html.escape(database_status)}\n\n"
+        f"CPU: {cpu_pct:.1f}%\n"
+        f"RAM: {ram_pct:.1f}%\n"
+        f"Disk: {disk_pct:.1f}%\n"
+        f"Uptime: {uptime_str}\n\n"
+        f"Balance: {balance:.2f}\n"
+        f"Equity: {equity:.2f}\n"
+        f"Floating: {floating:+.2f}\n"
+        f"Orders Today: {trade_summary['orders_today']}\n"
+        f"Win: {win_count}\n"
+        f"Loss: {loss_count}\n"
+        f"Win Rate: {win_rate:.2f}%\n"
+        f"Drawdown: {drawdown:.2f}%\n\n"
+        f"Last Signal: {html.escape(str(context.get('last_signal', trade_summary['last_signal'])))}\n"
+        f"Last Order: {html.escape(str(context.get('last_order', trade_summary['last_order'])))}\n"
+        f"Last Error: {html.escape(str(context.get('last_error', 'N/A') or 'N/A'))}\n"
+        f"Last Trade: {html.escape(str(trade_summary['last_trade_time']))}\n\n"
+        f"Learning Total: {learning_snapshot.get('total_trade', 0)}\n"
+        f"Learning Best Symbol: {html.escape(str(learning_snapshot.get('best_symbol', 'N/A')))}\n"
+        f"Learning Worst Symbol: {html.escape(str(learning_snapshot.get('worst_symbol', 'N/A')))}\n"
+        f"Learning Best Regime: {html.escape(str(learning_snapshot.get('best_regime', 'N/A')))}\n"
+        f"Learning Dangerous Regime: {html.escape(str(learning_snapshot.get('dangerous_regime', 'N/A')))}\n\n"
+        f"Brain DBs: {brain_status.get('databases', 0)}\n"
+        f"Brain Records: {brain_status.get('memory_records', 0)}\n"
+        f"Brain Backup: {html.escape(str(brain_status.get('last_backup', 'NONE')))}\n\n"
+        f"Health: {html.escape(str(health.get('status', 'UNKNOWN')))}\n"
+        f"Errors: {len(get_health().get_recent_errors(limit=5))}\n"
+        f"Warnings: {len(get_health().get_recent_warnings(limit=5))}"
+    )
+
+
 def handle_monitoring_command(command: str, context: dict[str, Any] | None = None) -> str:
     context = context or {}
     cmd = command.strip().lower()
+    if cmd == "/dashboard":
+        return build_live_dashboard(context)
     if cmd == "/status":
         return str(run_health_check())
+    if cmd == "/health":
+        health = run_health_check()
+        return (
+            f"Health: {health['status']}\n"
+            f"Issues: {', '.join(health.get('issues', [])) or 'None'}"
+        )
     if cmd == "/device":
         return str(get_device_health().to_dict())
     if cmd == "/mt5":
         return str(context.get("mt5", {"status": "UNKNOWN"}))
+    if cmd == "/orders":
+        return f"Open Trades: {_count_open_positions()}\nOrders Today: {_summarize_trade_history()['orders_today']}"
     if cmd == "/balance":
         return f"Balance: {context.get('balance', 'N/A')}"
     if cmd == "/equity":
@@ -353,7 +493,32 @@ def handle_monitoring_command(command: str, context: dict[str, Any] | None = Non
                 f"Total Trades: {perf['total_trades']}"
             )
         return "No performance data yet"
+    if cmd == "/logs":
+        health = get_health()
+        errors = health.get_recent_errors(limit=5)
+        warnings = health.get_recent_warnings(limit=5)
+        lines = ["Recent Errors:"]
+        if errors:
+            for item in errors:
+                lines.append(
+                    f"- {item.get('timestamp', 'N/A')} | {item.get('component', 'N/A')} | {item.get('message', 'N/A')}"
+                )
+        else:
+            lines.append("- None")
+        lines.append("Recent Warnings:")
+        if warnings:
+            for item in warnings:
+                lines.append(
+                    f"- {item.get('timestamp', 'N/A')} | {item.get('metric_name', 'N/A')} | {item.get('current_value', 'N/A')}"
+                )
+        else:
+            lines.append("- None")
+        return "\n".join(lines)
+    if cmd == "/report":
+        return build_live_dashboard(context)
     if cmd == "/restartbot":
+        return format_alert(ALERT_WARNING, "Restart command received. Manual restart hook is not enabled.")
+    if cmd == "/restart":
         return format_alert(ALERT_WARNING, "Restart command received. Manual restart hook is not enabled.")
     return "Unknown command"
 

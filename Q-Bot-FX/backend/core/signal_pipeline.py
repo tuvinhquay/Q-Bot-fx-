@@ -403,4 +403,5 @@ def run_signal_pipeline(settings: Settings) -> str | None:
     notifier.send(build_top_setup_report(brain_state))
     notifier.send(build_session_report(session_state))
     notifier.send(build_execution_report(execution_ai_state))
+    return signal
 

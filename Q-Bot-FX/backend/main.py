@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import sys
+import time
 from pathlib import Path
 
 import MetaTrader5 as mt5
@@ -25,6 +26,7 @@ from backend.services.deployment.runtime_checker import (
     check_runtime_environment,
     format_runtime_report,
 )
+from backend.services.recovery.crash_guard import CrashGuard
 from backend.services.telegram.monitoring_center import build_startup_report
 from config.settings import Settings
 
@@ -116,10 +118,21 @@ def main() -> None:
     except Exception as error:
         LOGGER.warning("Startup report failed: %s", error)
 
-    start_trading_loop(
-        settings,
-        run_once=run_once,
-    )
+    crash_guard = CrashGuard(TelegramNotifier(settings))
+
+    while True:
+        try:
+            start_trading_loop(
+                settings,
+                run_once=run_once,
+            )
+            break
+        except Exception as error:
+            crash_guard.handle_exception(error)
+            if run_once:
+                break
+            LOGGER.warning("Restarting Q-Bot-FX after crash...")
+            time.sleep(5)
 
 
 if __name__ == "__main__":
