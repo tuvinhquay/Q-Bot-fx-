@@ -1,13 +1,29 @@
-"""Q-Bot-FX trading engine entrypoint."""
-
-from __future__ import annotations
-
+# ==========================================================
+# PART 1
+# TELEGRAM SERVICES
+# ==========================================================
 import logging
 import sys
 import time
+
 from pathlib import Path
 
 import MetaTrader5 as mt5
+
+from backend.notifications.telegram_notifier import TelegramNotifier
+
+from backend.services.telegram.monitoring_center import (
+    build_startup_report,
+    build_live_dashboard,
+)
+
+from backend.services.telegram.telegram_service import (
+    get_telegram_service,
+)
+
+from backend.services.telegram.dashboard_updater import (
+    get_dashboard_updater,
+)
 
 # ===== FIX PYINSTALLER =====
 
@@ -20,14 +36,12 @@ if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
 from backend.core.scheduler import start_trading_loop
-from backend.notifications.telegram_notifier import TelegramNotifier
 from backend.services.mt5.auto_login_engine import MT5AutoLoginEngine
 from backend.services.deployment.runtime_checker import (
     check_runtime_environment,
     format_runtime_report,
 )
 from backend.services.recovery.crash_guard import CrashGuard
-from backend.services.telegram.monitoring_center import build_startup_report
 from config.settings import Settings
 
 logging.basicConfig(
@@ -76,6 +90,11 @@ def main() -> None:
     except ValueError as error:
         print(f"Settings error: {error}")
         return
+    
+    print("=" * 60)
+    print("TELEGRAM TOKEN :", settings.TELEGRAM_BOT_TOKEN[:15] + "...")
+    print("CHAT ID        :", settings.TELEGRAM_CHAT_ID)
+    print("=" * 60)
 
     print("Starting MT5 Auto Login Engine...")
 
@@ -95,45 +114,191 @@ def main() -> None:
         print(f"MT5 Error: {error}")
         return
 
+    # ==========================================================
+    # PART 2
+    # ACCOUNT INFORMATION
+    # ==========================================================
+
     account = {}
 
     account_info = mt5.account_info()
+
     if account_info:
+
         account = {
             "balance": float(account_info.balance),
             "equity": float(account_info.equity),
         }
-        print(f"Balance: {account['balance']} USD")
-        print(f"Equity : {account['equity']} USD")
+
+        print(f"Balance : {account['balance']} USD")
+        print(f"Equity  : {account['equity']} USD")
+
     else:
-        print("Unable to read account info from MT5.")
+
+        LOGGER.warning(
+            "Cannot read MT5 account information."
+        )
+
+    # ==========================================================
+    # PART 3
+    # INITIALIZE TELEGRAM CORE
+    # ==========================================================
+
+    telegram_service = get_telegram_service()
+
+    telegram_service.initialize(
+
+        settings.TELEGRAM_BOT_TOKEN
+
+    )
+
+    LOGGER.info(
+
+        "Telegram Service initialized."
+
+    )
+
+    dashboard_updater = get_dashboard_updater()
+
+    dashboard_updater.initialize(
+
+        telegram_service
+
+    )
+
+    dashboard_updater.set_interval(5)
+
+    LOGGER.info(
+
+        "Dashboard Updater initialized."
+
+    )
+
+    # ==========================================================
+    # PART 4
+    # INITIALIZE LIVE DASHBOARD
+    # ==========================================================
+
+    if settings.TELEGRAM_CHAT_ID:
+
+        telegram_service.initialize_dashboard(
+
+            int(settings.TELEGRAM_CHAT_ID)
+
+        )
+
+        LOGGER.info(
+
+            "Telegram Dashboard initialized."
+
+        )
+
+    else:
+
+        LOGGER.warning(
+
+            "Telegram Chat ID not configured."
+
+        )
+
+    # ==========================================================
+    # PART 5
+    # SEND STARTUP REPORT
+    # ==========================================================
 
     try:
-        TelegramNotifier(settings).send(
-            build_startup_report(
-                mt5_state={"status": "CONNECTED"},
-                account=account,
-            )
-        )
-    except Exception as error:
-        LOGGER.warning("Startup report failed: %s", error)
 
-    crash_guard = CrashGuard(TelegramNotifier(settings))
+        notifier = TelegramNotifier(settings)
+
+        notifier.send(
+
+            build_startup_report(
+
+                mt5_state={
+
+                    "status": "CONNECTED"
+
+                },
+
+                account=account,
+
+            )
+
+        )
+
+        LOGGER.info(
+
+            "Startup report sent."
+
+        )
+
+    except Exception as error:
+
+        LOGGER.warning(
+
+            "Startup report failed: %s",
+
+            error,
+
+        )
+
+    # ==========================================================
+    # PART 6
+    # VERIFY AUTOTRADING
+    # ==========================================================
+
+    try:
+
+        enable_mt5_autotrading()
+
+    except RuntimeError as error:
+
+        LOGGER.error(str(error))
+
+        try:
+
+            TelegramNotifier(settings).send(
+
+                f"⚠️ MT5 WARNING\n\n{error}"
+
+            )
+
+        except Exception:
+
+            pass
+
+    # ==========================================================
+    # PART 7
+    # START TRADING LOOP
+    # ==========================================================
+
+    crash_guard = CrashGuard(
+        TelegramNotifier(settings)
+    )
 
     while True:
+
         try:
+
             start_trading_loop(
                 settings,
                 run_once=run_once,
             )
+
             break
+
         except Exception as error:
+
             crash_guard.handle_exception(error)
+
             if run_once:
                 break
-            LOGGER.warning("Restarting Q-Bot-FX after crash...")
+
+            LOGGER.warning(
+                "Restarting Q-Bot-FX after crash..."
+            )
+
             time.sleep(5)
 
-
 if __name__ == "__main__":
-    main()
+    main()            
