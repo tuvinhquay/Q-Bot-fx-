@@ -21,6 +21,9 @@ class TelegramNotifier:
             data = response.json()
             if isinstance(data, dict):
                 return data
+        except requests.HTTPError as error:
+            body = error.response.text if error.response is not None else ""
+            LOGGER.warning("[TELEGRAM] API error: %s | %s", error, body)
         except Exception as error:
             LOGGER.warning("[TELEGRAM] request failed: %s", error)
         return None
@@ -33,10 +36,15 @@ class TelegramNotifier:
                 "text": message,
                 "parse_mode": "HTML"
             }
-            self._post(self.base_url, payload)
+            data = self._post(self.base_url, payload)
+            if data is None:
+                LOGGER.warning("[TELEGRAM] Text alert failed without API response")
+                return None
             LOGGER.info("[TELEGRAM] Text alert sent successfully")
+            return data
         except Exception as e:
             LOGGER.warning("[TELEGRAM] Text alert failed: %s", e)
+            return None
 
     def send_dashboard_message(self, message: str) -> int | None:
         payload = {

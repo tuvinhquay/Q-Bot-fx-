@@ -31,9 +31,17 @@ class Settings:
         self.MT5_LOGIN = int(self._get_required("MT5_LOGIN"))
         self.MT5_PASSWORD = self._get_required("MT5_PASSWORD")
         self.MT5_SERVER = self._get_required("MT5_SERVER")
+        self.MT5_PATH = os.getenv("MT5_PATH", "")
 
         # Risk
-        self.RISK_PERCENT = 1
+        self.RISK_PER_TRADE = self._get_float_env("RISK_PER_TRADE", 0.01)
+        self.RISK_PERCENT = self.RISK_PER_TRADE * 100.0
+
+        # Live trading safety guard
+        self.LIVE_TRADING_ENABLED = os.getenv("LIVE_TRADING_ENABLED", "false").lower() == "true"
+        self.TRADING_MODE = os.getenv("TRADING_MODE", "TEST" if not self.LIVE_TRADING_ENABLED else "LIVE").upper()
+        self.EXECUTION_MODE = os.getenv("EXECUTION_MODE", self.TRADING_MODE).upper()
+        self.TRADING_ENABLED = os.getenv("TRADING_ENABLED", "true" if self.LIVE_TRADING_ENABLED or self.TRADING_MODE in {"TEST", "LIVE"} else "false").lower() == "true"
 
         # Symbol portfolio
         self.SYMBOLS = [
@@ -73,6 +81,26 @@ class Settings:
             raise ValueError(f"Missing required environment variable: {name}")
         return value
 
+    @staticmethod
+    def _get_float_env(name: str, default: float) -> float:
+        value = os.getenv(name)
+        if value is None:
+            return default
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return default
+
+
+# ===== RISK CONFIG =====
+RISK_PER_TRADE = float(os.getenv("RISK_PER_TRADE", "0.01"))
+RISK_PERCENT = RISK_PER_TRADE * 100.0
+
+# ===== LIVE TRADING SAFETY =====
+LIVE_TRADING_ENABLED = os.getenv("LIVE_TRADING_ENABLED", "false").lower() == "true"
+TRADING_MODE = os.getenv("TRADING_MODE", "TEST" if not LIVE_TRADING_ENABLED else "LIVE").upper()
+EXECUTION_MODE = os.getenv("EXECUTION_MODE", TRADING_MODE).upper()
+TRADING_ENABLED = os.getenv("TRADING_ENABLED", "true" if LIVE_TRADING_ENABLED or TRADING_MODE in {"TEST", "LIVE"} else "false").lower() == "true"
 
 # ===== FORCE SIGNAL TEST MODE =====
 FORCE_SIGNAL_MODE = os.getenv("FORCE_SIGNAL_MODE", "false").lower() == "true"

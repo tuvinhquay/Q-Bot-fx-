@@ -10,6 +10,14 @@ from pathlib import Path
 
 import MetaTrader5 as mt5
 
+BASE_DIR = Path(__file__).resolve().parents[1]
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
+from backend.bootstrap import ensure_project_root_on_path
+
+ensure_project_root_on_path()
+
 from backend.notifications.telegram_notifier import TelegramNotifier
 
 from backend.services.telegram.monitoring_center import (
@@ -112,6 +120,11 @@ def main() -> None:
         enable_mt5_autotrading()
     except RuntimeError as error:
         print(f"MT5 Error: {error}")
+        LOGGER.error("MT5 startup blocked: %s", error)
+        try:
+            TelegramNotifier(settings).send(f"⚠️ MT5 BLOCKED\n\n{error}")
+        except Exception as telegram_error:
+            LOGGER.warning("Startup Telegram alert failed: %s", telegram_error)
         return
 
     # ==========================================================

@@ -1,10 +1,27 @@
 """
-PROMPT 34v1.2 - NOVA-BOT-FX PRODUCTION BUILD SYSTEM
-Enterprise-Grade Portable Distribution
+Q-BOT-FX PHASE 1 STATUS UPDATE
+Date: 2026-08-10
+Time: 22:06 UTC+7
+Branch: prompt-35-trade-executor
 
 ==================================================
-IMPLEMENTATION COMPLETE ✅
+IMPLEMENTATION STATUS ✅
 ==================================================
+
+The runtime bootstrap path is now fixed and the bot can start from the repository root without import failures.
+
+Verified today:
+- Python package import path now resolves correctly from source execution.
+- MT5 login/connect path succeeds with the configured Exness test account.
+- Telegram notifier sends a real message successfully through the Telegram Bot API.
+- The remaining hard blocker for live order execution is MT5 auto-trading permission being disabled in the terminal.
+
+Current blocker:
+- MT5 terminal reports trade_allowed=False despite successful connection and account verification.
+- Until auto-trading is enabled in the MetaTrader 5 terminal, the system can initialize and report but cannot submit real orders.
+
+Next action:
+- Enable Auto Trading in the MT5 terminal and re-run the live execution flow.
 
 Commit: 2e9d46b
 Branch: prompt-34-monitoring-validation  
@@ -1005,3 +1022,614 @@ Prompt 34
 PASS
 
 Ready for Prompt 35.
+.....................................................................................................................................................
+# Q-Bot-FX — PROJECT STATUS
+
+**Ngày cập nhật:** 06/08/2026
+**Giai đoạn:** Project Audit V1
+**Trạng thái tổng thể:** 🟢 MONITORING PASS — ĐÃ XÁC NHẬN LUỒNG KHỞI ĐỘNG + TELEGRAM
+
+# PROJECT CHECKPOINT — 2026-08-10
+
+## Git / Version Control
+- Created new branch for Phase 1 runtime validation.
+- Current changes preserved.
+- No previous history deleted.
+- No previous documentation overwritten.
+- All changes will be committed as a dedicated checkpoint.
+
+Branch:
+phase1-runtime-validation-20260810
+
+## System Status
+System:
+PASS
+
+Runtime bootstrap:
+PASS
+
+Python compile:
+PASS
+
+Automated tests:
+PASS
+
+Telegram:
+PASS
+
+MT5 connection:
+PASS
+
+MT5 account verification:
+PASS
+
+Real order execution:
+PENDING LIVE MARKET VALIDATION
+
+Position verification:
+PENDING
+
+Position monitoring:
+PENDING
+
+Long-run trading:
+PENDING
+
+## MT5 / Exness Demo
+Q-Bot-FX đã kết nối thành công tới tài khoản Demo Exness được cấu hình trong môi trường hiện tại.
+
+Các thông tin runtime đã xác nhận:
+- MT5 connection: successful
+- Account verification: successful
+- Account information: available
+- Server: Exness-MT5Trial14
+
+## Telegram
+Telegram notification path đã được kiểm tra bằng API thực tế.
+
+Kết quả:
+PASS
+
+Bot đã nhận được thông báo runtime validation.
+
+## Important Runtime Observation
+Trong lần kiểm tra trước, MT5 terminal trả về:
+
+trade_allowed=False
+
+Do đó real order chưa được xác nhận.
+
+Đây là một runtime condition cần được kiểm tra lại khi thị trường hoạt động.
+
+## Current Project Assessment
+Q-Bot-FX hiện đã vượt qua giai đoạn:
+- project bootstrap
+- MT5 connection
+- account verification
+- Telegram notification
+- executor validation
+- automated regression validation
+
+Nhưng CHƯA được đánh dấu:
+FULLY OPERATIONAL
+
+cho đến khi hoàn thành live execution validation trên Demo Exness.
+
+## Next Required Test
+Q-Bot-FX phải thực sự đi được hết pipeline:
+
+MARKET DATA
+→ ANALYSIS
+→ SIGNAL
+→ RISK
+→ SL/TP
+→ EXECUTION
+→ MT5 ORDER
+→ POSITION
+→ MONITORING
+→ TELEGRAM
+
+Chỉ khi pipeline trên được xác nhận bằng runtime thực tế mới được chuyển trạng thái dự án sang OPERATIONAL.
+
+---
+
+## 1. CURRENT STABLE BASELINE
+
+### Git
+
+* Branch hiện tại: `prompt-35-trade-executor`
+* Tag ổn định: `v0.3-monitoring-pass`
+* Commit monitoring PASS: `5d31749`
+* Remote branch đã push thành công.
+* Tag `v0.3-monitoring-pass` đã push lên GitHub.
+
+### Telegram Monitoring
+
+Đã xác nhận hệ thống có thể:
+
+* Khởi động Q-Bot-FX.
+* Kết nối MT5.
+* Đọc thông tin tài khoản.
+* Khởi tạo Telegram Service.
+* Khởi tạo Dashboard.
+* Gửi Startup / Monitoring Dashboard về Telegram.
+
+### Telegram Runtime Result
+
+Đã nhận được thông báo:
+
+`🟢 Q-BOT-FX ONLINE`
+
+Bao gồm:
+
+* System Version
+* Branch
+* Node
+* Uptime
+* MT5 Connected
+* Telegram Online
+* Gemini Online
+* Portfolio Engine
+* Risk Manager
+* Signal Engine
+* Account information
+* Balance
+* Equity
+* Profit Today
+* Drawdown
+* Open Trades
+* Market session
+* Market status
+* Server health
+* CPU
+* RAM
+* Disk
+* Internet
+* Gemini status
+* Signal confidence
+* Risk status
+* Brain status
+* Database information
+* Backup status
+* Monitoring Version
+
+=> **Telegram Monitoring System đã được xác nhận hoạt động thực tế.**
+
+---
+
+# 2. PROJECT AUDIT V1
+
+## Repository Structure
+
+Kết quả khảo sát:
+
+* Python files: 186
+* Python compiled files: 187 `.pyc`
+* JSON: 8
+* TXT: 6
+* Markdown: 4
+* PNG: 3
+* HTML: 1
+* CSV: 1
+* PowerShell: 1
+* Tổng số files: 412
+* Tổng số directories: 87
+
+Lưu ý:
+
+* `.pyc` và các file build/deployment không được xem là source module chính.
+* Project có nhiều module được xây dựng qua nhiều Prompt trước đây.
+* Cần phân biệt rõ module production, module framework, module demo/test và module legacy.
+
+---
+
+# 3. BACKEND MODULE MAP
+
+Các nhóm chính đã được xác định:
+
+* adaptive
+* analysis
+* backtest
+* brain
+* chart
+* core
+* data
+* database
+* execution
+* guards
+* logging
+* mt5
+* mt5_gateway
+* notifications
+* optimizer
+* performance
+* portfolio
+* risk
+* services
+* strategy
+
+Riêng `backend/services` hiện chứa nhiều subsystem.
+
+Số lượng Python file khảo sát được:
+
+* backend: 3
+* adaptive: 5
+* analysis: 7
+* backtest: 5
+* brain: 10
+* chart: 2
+* core: 4
+* data: 3
+* database: 1
+* execution: 3
+* guards: 2
+* logging: 1
+* mt5: 4
+* mt5_gateway: 4
+* notifications: 1
+* optimizer: 4
+* performance: 3
+* portfolio: 5
+* risk: 3
+* services: 91
+* strategy: 3
+
+---
+
+# 4. MAIN ENTRYPOINT AUDIT
+
+File:
+
+`backend/main.py`
+
+Các thành phần chính được xác nhận có liên quan:
+
+* `Settings`
+* `MT5AutoLoginEngine`
+* `TelegramNotifier`
+* `TelegramService`
+* `DashboardUpdater`
+* `CrashGuard`
+* `start_trading_loop`
+* runtime checker
+* MT5 connection
+* Telegram monitoring
+* trading loop
+
+Luồng tổng quát:
+
+Settings
+→ Runtime Check
+→ MT5 Auto Login
+→ MT5 Account
+→ Telegram Service
+→ Dashboard
+→ Startup Notification
+→ AutoTrading Verification
+→ Trading Loop
+→ Crash Recovery
+
+---
+
+# 5. TELEGRAM SYSTEM AUDIT
+
+File production mới:
+
+`backend/services/telegram/telegram_service.py`
+
+Đã xác nhận Python import đúng file:
+
+`D:\Q-Bot-fx-\Q-Bot-FX\backend\services\telegram\telegram_service.py`
+
+`TelegramService` hiện có:
+
+* initialize
+* initialized
+* send_message
+* edit_message
+* create_dashboard
+* update_dashboard
+* delete_dashboard
+
+Singleton:
+
+`get_telegram_service()`
+
+Helper:
+
+`initialize_telegram_service()`
+
+Status:
+
+`telegram_service_status()`
+
+Readiness:
+
+`is_telegram_ready()`
+
+=> Telegram Service mới đã được compile PASS và đã được runtime xác nhận bằng Telegram message thực tế.
+
+---
+
+# 6. TELEGRAM DASHBOARD
+
+Dashboard system hiện được kết nối với:
+
+* TelegramService
+* DashboardManager
+* DashboardUpdater
+* Monitoring Center
+
+Dashboard đã gửi dữ liệu runtime thực tế về Telegram.
+
+=> Không tiếp tục sửa Telegram Monitoring nếu không phát sinh lỗi thực tế.
+
+**Trạng thái: LOCKED / STABLE BASELINE**
+
+---
+
+# 7. SIGNAL PIPELINE AUDIT
+
+File:
+
+`backend/core/signal_pipeline.py`
+
+Đã xác nhận pipeline có liên kết đến nhiều tầng:
+
+### Market
+
+* MT5
+* Market Data
+* Market Guard
+* Session Detection
+* Spread Guard
+* Volatility Trap
+
+### Strategy
+
+* Strategy Engine
+* Strategy Weight Manager
+* Signal Generator
+
+### Portfolio
+
+* Portfolio Manager
+* Multi Symbol Portfolio Brain
+
+### Risk
+
+* Risk Manager
+* Portfolio Heat
+* Dynamic Risk
+* Exposure Filter
+* Daily Drawdown
+* Risk per Trade
+* Lot Calculation
+
+### Adaptive AI
+
+* Adaptive Score
+* Adaptive Intelligence
+* Market Regime
+* Learning Memory
+* Strategy Weight
+
+### Execution AI
+
+* Candle Confirmation
+* Entry Optimizer
+* Execution Cooldown
+* FOMO Detector
+* Patience Engine
+* Execution Report
+
+### Learning
+
+* Learning Memory Engine
+* Trade recording
+* Learning report
+
+### Notification
+
+* Telegram Notifier
+* Telegram reports
+* Top setup report
+* Execution report
+
+=> Signal Pipeline hiện là một trong những module trung tâm quan trọng nhất của hệ thống.
+
+---
+
+# 8. TRADE EXECUTOR AUDIT
+
+File:
+
+`backend/execution/trade_executor.py`
+
+Đã xác nhận:
+
+* Có `TradeExecutor`.
+* Có `open_market_order()`.
+* Có `mt5.order_send()`.
+* Có BUY.
+* Có SELL.
+* Có volume/lot.
+* Có price.
+* Có request.
+* Có magic number.
+* Có kiểm tra position.
+* Có đếm open positions.
+
+Magic number hiện tại:
+
+`2025`
+
+---
+
+# 9. EXECUTION CALL GRAPH
+
+Đã xác nhận bằng PowerShell:
+
+`backend/core/signal_pipeline.py`
+
+gọi:
+
+`executor.open_market_order(symbol, signal, lot)`
+
+Và:
+
+`TradeExecutor()` được khởi tạo trong:
+
+`backend/core/signal_pipeline.py`
+
+Kết luận:
+
+Signal Pipeline
+→ TradeExecutor
+→ open_market_order()
+→ mt5.order_send()
+
+=> **Luồng gọi execution đã tồn tại và được xác nhận bằng source audit.**
+
+---
+
+# 10. CURRENT TRADING STATE
+
+Đã xác nhận hệ thống có:
+
+* MT5 Auto Login
+* Account connection
+* Signal Pipeline
+* Strategy Engine
+* Portfolio Engine
+* Risk Manager
+* Execution AI
+* Trade Executor
+* MT5 order_send
+* Telegram Monitoring
+* Crash Guard
+* Trading Loop
+
+Tuy nhiên:
+
+**Chưa được phép kết luận hệ thống giao dịch tự động đã Production Trading PASS chỉ dựa trên source audit.**
+
+Cần thực hiện runtime validation riêng cho:
+
+1. Signal generation
+2. Risk approval
+3. Trade Executor
+4. MT5 order execution
+5. SL/TP
+6. Position tracking
+7. Trade logging
+8. Telegram execution notification
+9. Crash recovery
+10. Long-running stability
+
+---
+
+# 11. IMPORTANT FINDINGS
+
+Project hiện có số lượng module lớn và nhiều subsystem được xây dựng qua các Prompt khác nhau.
+
+Đã phát hiện dấu hiệu tồn tại đồng thời:
+
+* production modules
+* framework modules
+* test modules
+* demo modules
+* legacy modules
+* deployment modules
+* backup modules
+
+Do đó:
+
+**Không được xóa module chỉ vì chưa thấy module đó được gọi từ `main.py`.**
+
+Trước khi xóa phải thực hiện:
+
+Dependency Audit
+→ Reference Audit
+→ Runtime Audit
+→ xác nhận không còn sử dụng
+→ mới được phép loại bỏ.
+
+---
+
+# 12. PROJECT AUDIT V1 STATUS
+
+### Đã PASS
+
+* Repository structure audit
+* Backend module inventory
+* Main entrypoint dependency audit
+* Signal Pipeline dependency audit
+* Trade Executor source audit
+* Telegram Service source audit
+* Telegram Dashboard source audit
+* MT5 connection verification
+* Telegram runtime notification
+* Monitoring Dashboard runtime notification
+
+### Chưa PASS
+
+* Full automatic trade execution
+* Real order execution validation
+* SL/TP validation
+* Long-running stability 2–3 days
+* Crash recovery runtime test
+* Complete dependency cleanup
+* Legacy/demo module classification
+* Laptop deployment validation
+
+---
+
+# 13. NEXT PHASE
+
+## Q-Bot-FX Production Readiness Audit
+
+Thứ tự đề xuất:
+
+1. Trade Executor runtime audit
+2. Risk → Execution flow audit
+3. SL/TP audit
+4. Order request audit
+5. Demo account controlled execution test
+6. Position monitoring
+7. Trade result logging
+8. Telegram execution notification
+9. Long-running stability test
+10. Laptop deployment
+
+**Không mở rộng tính năng mới trước khi hoàn thành các bước validation trên.**
+
+---
+
+## BASELINE
+
+`v0.3-monitoring-pass`
+
+Monitoring system:
+
+🟢 PASS
+
+Telegram:
+
+🟢 PASS
+
+MT5 connection:
+
+🟢 PASS
+
+Signal Pipeline:
+
+🟡 AUDITED — RUNTIME EXECUTION PENDING
+
+Trade Executor:
+
+🟡 SOURCE VERIFIED — RUNTIME EXECUTION PENDING
+
+Production Trading:
+
+🟡 NOT YET CERTIFIED
