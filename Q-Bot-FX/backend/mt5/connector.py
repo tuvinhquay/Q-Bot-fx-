@@ -1,4 +1,4 @@
-"""MT5 connector abstraction for Q-Bot-FX MVP pipeline."""
+﻿"""MT5 connector abstraction for Q-Bot-FX MVP pipeline."""
 
 from __future__ import annotations
 
@@ -42,11 +42,15 @@ class MT5Connector:
             self.is_connected = False
             return False
 
-        self.is_connected = mt5.initialize(
-            login=login,
-            password=self.settings.MT5_PASSWORD,
-            server=self.settings.MT5_SERVER,
-        )
+        initialize_params = {
+            "login": login,
+            "password": self.settings.MT5_PASSWORD,
+            "server": self.settings.MT5_SERVER,
+        }
+        if self.settings.MT5_PATH:
+            initialize_params["path"] = self.settings.MT5_PATH
+
+        self.is_connected = mt5.initialize(**initialize_params)
 
         if self.is_connected:
             LOGGER.info("MT5 connection established.")
@@ -90,7 +94,7 @@ class MT5Connector:
                 return pd.DataFrame()
 
             # ensure symbol visible in MarketWatch
-            if not symbol_info.visible:
+            if not getattr(symbol_info, "visible", True):
                 LOGGER.info("Enabling symbol %s in MarketWatch", symbol)
                 mt5.symbol_select(symbol, True)
 

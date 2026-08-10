@@ -302,6 +302,11 @@ This was treated as a runtime condition of the MT5 terminal state rather than ev
 - Confirm position monitoring.
 - Confirm emergency/recovery behavior.
 
+### Additional runtime observation
+- MT5 terminal remained connected but reported terminal trade permission as false.
+- The current MT5 session did not expose the expected symbols used by the existing strategy pipeline (for example EURUSDm/EURUSD), so symbol availability remains a runtime blocker.
+- The project remains blocked from a real demo order until both the terminal trade permission and a tradable symbol state are confirmed.
+
 ------------------------------------------------------------
 
 NEXT VERSION

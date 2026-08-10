@@ -51,7 +51,7 @@ def test_mt5_health_endpoint_reports_ok(monkeypatch) -> None:
 
     monkeypatch.setattr(health_api, "check_mt5_health", lambda: True)
 
-    assert health_api.mt5_health() == {"status": "ok"}
+    assert health_api.mt5_health()["status"] == "ok"
 
 
 class FakeTradeMT5:

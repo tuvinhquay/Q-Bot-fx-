@@ -24,6 +24,28 @@ def test_lot_size_is_positive(monkeypatch, tmp_path) -> None:
     assert lot == 0.02
 
 
+def test_calculate_lot_size_from_price_distance_uses_symbol_parameters(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("RISK_PER_TRADE", "0.01")
+
+    risk = RiskManager(daily_guard_path=tmp_path / "daily_guard.json")
+
+    monkeypatch.setattr(
+        risk,
+        "_get_symbol_pip_parameters",
+        lambda symbol: (0.0001, 5.0),
+    )
+
+    lot = risk.calculate_lot_size_from_price_distance(
+        balance=1000,
+        entry_price=1.20000,
+        stop_loss_price=1.19000,
+        symbol="EURUSDm",
+    )
+
+    assert lot > 0
+    assert lot == 0.02
+
+
 def test_cannot_exceed_max_open_trades(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("MAX_OPEN_TRADES", "3")
     risk = RiskManager(daily_guard_path=tmp_path / "daily_guard.json")

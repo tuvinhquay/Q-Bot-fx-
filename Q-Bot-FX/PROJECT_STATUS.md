@@ -1131,6 +1131,22 @@ MARKET DATA
 
 Chỉ khi pipeline trên được xác nhận bằng runtime thực tế mới được chuyển trạng thái dự án sang OPERATIONAL.
 
+## Additional Runtime Observation — 2026-08-10
+- MT5 terminal connection was verified successfully.
+- Account verification succeeded for the configured Exness Demo account.
+- Terminal-level trade permission remained false during live validation.
+- The current MT5 session did not expose the strategy symbols expected by the existing pipeline, including EURUSDm/EURUSD.
+- Because of these runtime conditions, a real demo order was not placed and position verification did not proceed.
+
+## Current Blocker
+- Terminal trade permission: BLOCKED
+- Symbol availability: BLOCKED
+- Real order execution: NOT VERIFIED
+
+## Next Step
+- Re-check the MT5 terminal settings and symbol availability in the live trading environment.
+- Re-run the end-to-end pipeline only after trade permission and a tradable symbol are confirmed.
+
 ---
 
 ## 1. CURRENT STABLE BASELINE

@@ -202,58 +202,260 @@ def run_signal_pipeline(settings: Settings) -> str | None:
         LOGGER.info("[ADAPTIVE AI] Trade blocked by self-protection layer.")
         signal = "HOLD"
 
-    # ===== EXECUTION AI =====
-    entry_preview = float(candles["close"].iloc[-1]) if not candles.empty else 0.0
-    candle_state = evaluate_candle_confirmation(candles)
+    # =========================================================
+    # EXECUTION AI
+    # =========================================================
+    # Entry / SL / TP phải được xác định trước khi đi vào
+    # Execution AI.
+
+    entry_preview = (
+        float(candles["close"].iloc[-1])
+        if not candles.empty
+        else 0.0
+    )
+
+    # ---------------------------------------------------------
+    # Kiểm tra giá Entry
+    # ---------------------------------------------------------
+    if entry_preview <= 0:
+        LOGGER.warning(
+            "[EXECUTION AI] Giá entry không hợp lệ."
+        )
+        signal = "HOLD"
+
+    # ---------------------------------------------------------
+    # Chuẩn hóa SL / TP
+    # ---------------------------------------------------------
+    # HOLD không được đưa SL/TP = 0 vào Execution AI.
+    if signal not in {"BUY", "SELL"}:
+        signal_sl = entry_preview
+        signal_tp = entry_preview
+    else:
+        signal_sl = float(signal_sl)
+        signal_tp = float(signal_tp)
+
+    # ---------------------------------------------------------
+    # Kiểm tra hướng SL / TP
+    # ---------------------------------------------------------
+    levels_valid = True
+
+    if signal == "BUY":
+
+        if signal_sl <= 0 or signal_tp <= 0:
+            levels_valid = False
+
+        elif not (
+            signal_sl < entry_preview < signal_tp
+        ):
+            levels_valid = False
+
+    elif signal == "SELL":
+
+        if signal_sl <= 0 or signal_tp <= 0:
+            levels_valid = False
+
+        elif not (
+            signal_tp < entry_preview < signal_sl
+        ):
+            levels_valid = False
+
+    # ---------------------------------------------------------
+    # SL / TP Guard
+    # ---------------------------------------------------------
+    if signal in {"BUY", "SELL"} and not levels_valid:
+
+        LOGGER.warning(
+            "[SL/TP GUARD] Mức SL/TP không hợp lệ: "
+            "signal=%s entry=%.5f sl=%.5f tp=%.5f",
+            signal,
+            entry_preview,
+            signal_sl,
+            signal_tp,
+        )
+
+        signal = "HOLD"
+
+    # ---------------------------------------------------------
+    # Chỉ chạy Execution AI khi dữ liệu hợp lệ
+    # ---------------------------------------------------------
+    candle_state = evaluate_candle_confirmation(
+        candles
+    )
+
     entry_state = optimize_entry(
         entry=entry_preview,
         stop_loss=float(signal_sl),
         take_profit=float(signal_tp),
-        trap_score=float(trap_state["trap_score"]),
+        trap_score=float(
+            trap_state["trap_score"]
+        ),
     )
+
     fomo_state = detect_fomo(
         current_price=entry_preview,
-        suggested_entry=float(entry_state["optimized_entry"]),
-        spread_quality=str(spread_state["spread_quality"]),
-        trap_score=float(trap_state["trap_score"]),
+        suggested_entry=float(
+            entry_state["optimized_entry"]
+        ),
+        spread_quality=str(
+            spread_state["spread_quality"]
+        ),
+        trap_score=float(
+            trap_state["trap_score"]
+        ),
     )
+
     cooldown_state = evaluate_cooldown(
-        loss_streak=int(capital_state["consecutive_losses"]) if "capital_state" in locals() else 0,
-        emotional_risk_score=float(capital_state["emotional_risk_score"]) if "capital_state" in locals() else 50.0,
-        market_danger_score=float(capital_state["market_danger_score"]) if "capital_state" in locals() else 50.0,
+        loss_streak=(
+            int(capital_state["consecutive_losses"])
+            if "capital_state" in locals()
+            else 0
+        ),
+        emotional_risk_score=(
+            float(
+                capital_state[
+                    "emotional_risk_score"
+                ]
+            )
+            if "capital_state" in locals()
+            else 50.0
+        ),
+        market_danger_score=(
+            float(
+                capital_state[
+                    "market_danger_score"
+                ]
+            )
+            if "capital_state" in locals()
+            else 50.0
+        ),
     )
+
     patience_state = evaluate_patience(
-        adaptive_score=float(adaptive.get("adaptive_score", 50.0)),
-        timing_score=float(timing_state["timing_score"]),
-        trap_score=float(trap_state["trap_score"]),
-        spread_quality=str(spread_state["spread_quality"]),
-        confidence_score=float(adaptive_ai_state.get("adaptive_confidence", 50.0)),
-        candle_confirmed=bool(candle_state["confirmed"]),
-        loss_streak=int(cooldown_state["remaining_cycles"]),
-        market_danger_score=float(capital_state["market_danger_score"]) if "capital_state" in locals() else 50.0,
+        adaptive_score=float(
+            adaptive.get(
+                "adaptive_score",
+                50.0,
+            )
+        ),
+        timing_score=float(
+            timing_state["timing_score"]
+        ),
+        trap_score=float(
+            trap_state["trap_score"]
+        ),
+        spread_quality=str(
+            spread_state["spread_quality"]
+        ),
+        confidence_score=float(
+            adaptive_ai_state.get(
+                "adaptive_confidence",
+                50.0,
+            )
+        ),
+        candle_confirmed=bool(
+            candle_state["confirmed"]
+        ),
+        loss_streak=int(
+            cooldown_state["remaining_cycles"]
+        ),
+        market_danger_score=(
+            float(
+                capital_state[
+                    "market_danger_score"
+                ]
+            )
+            if "capital_state" in locals()
+            else 50.0
+        ),
     )
+
     execution_ai_state = {
         **patience_state,
         "rr_score": entry_state["rr_score"],
-        "candle_strength": candle_state["strength"],
-        "fomo_severity": fomo_state["severity"],
+        "candle_strength": candle_state[
+            "strength"
+        ],
+        "fomo_severity": fomo_state[
+            "severity"
+        ],
     }
-    LOGGER.info("[EXECUTION AI] decision=%s reason=%s", patience_state["decision"], patience_state["reason"])
-    LOGGER.info("[PATIENCE SCORE] %.2f", float(patience_state["patience_score"]))
-    LOGGER.info("[FOMO DETECTED] %s (%s)", fomo_state["fomo_detected"], fomo_state["severity"])
-    LOGGER.info("[COOLDOWN ACTIVE] %s (%s)", cooldown_state["cooldown_active"], cooldown_state["remaining_cycles"])
-    if bool(cooldown_state["cooldown_active"]):
-        signal = "HOLD"
-    if not bool(patience_state["allow_execution"]):
+
+    LOGGER.info(
+        "[EXECUTION AI] decision=%s reason=%s",
+        patience_state["decision"],
+        patience_state["reason"],
+    )
+
+    LOGGER.info(
+        "[PATIENCE SCORE] %.2f",
+        float(
+            patience_state["patience_score"]
+        ),
+    )
+
+    LOGGER.info(
+        "[FOMO DETECTED] %s (%s)",
+        fomo_state["fomo_detected"],
+        fomo_state["severity"],
+    )
+
+    LOGGER.info(
+        "[COOLDOWN ACTIVE] %s (%s)",
+        cooldown_state["cooldown_active"],
+        cooldown_state["remaining_cycles"],
+    )
+
+    # =========================================================
+    # EXECUTION GUARD
+    # =========================================================
+
+    if bool(
+        cooldown_state["cooldown_active"]
+    ):
+
+        LOGGER.info(
+            "[EXECUTION GUARD] "
+            "Cooldown đang hoạt động -> HOLD"
+        )
+
         signal = "HOLD"
 
-    # ===== SEND TELEGRAM ALERT =====
-    if signal in ["BUY", "SELL"]:
+    if not bool(
+        patience_state["allow_execution"]
+    ):
+
+        LOGGER.info(
+            "[EXECUTION GUARD] "
+            "Patience Engine không cho phép "
+            "execution -> HOLD"
+        )
+
+        signal = "HOLD"
+
+    if signal == "HOLD":
+
+        LOGGER.info(
+            "[EXECUTION GUARD] "
+            "Final execution decision = HOLD"
+        )
+
+
+    # =========================================================
+    # SEND TELEGRAM ALERT
+    # =========================================================
+
+    if signal in {"BUY", "SELL"}:
+
         notifier = TelegramNotifier(settings)
+
         trade_levels = {
-            "entry": float(candles["close"].iloc[-1]) if not candles.empty else 0.0,
-            "stop_loss": signal_sl,
-            "take_profit": signal_tp,
+            "entry": (
+                float(candles["close"].iloc[-1])
+                if not candles.empty
+                else 0.0
+            ),
+            "stop_loss": float(signal_sl),
+            "take_profit": float(signal_tp),
         }
 
         chart_df = connector.get_rates(
@@ -270,7 +472,10 @@ def run_signal_pipeline(settings: Settings) -> str | None:
             tp=trade_levels["take_profit"],
         )
 
-        LOGGER.info("[TELEGRAM] Sending AI alert...")
+        LOGGER.info(
+            "[TELEGRAM] Sending AI alert..."
+        )
+
         caption = build_telegram_caption(
             signal=signal,
             symbol=symbol,
@@ -278,65 +483,378 @@ def run_signal_pipeline(settings: Settings) -> str | None:
             adaptive=adaptive,
             market_regime=market_regime,
             portfolio_result=portfolio_result,
-            adaptive_ai=build_adaptive_summary_for_telegram(adaptive_ai_state),
+            adaptive_ai=build_adaptive_summary_for_telegram(
+                adaptive_ai_state
+            ),
             execution_ai=execution_ai_state,
         )
-        LOGGER.info("[TELEGRAM] Caption built successfully")
 
-        notifier.send_photo(chart_path, caption)
-        LOGGER.info("[TELEGRAM] Photo sent successfully")
+        LOGGER.info(
+            "[TELEGRAM] Caption built successfully"
+        )
+
+        notifier.send_photo(
+            chart_path,
+            caption,
+        )
+
+        LOGGER.info(
+            "[TELEGRAM] Photo sent successfully"
+        )
+
+    # =========================================================
+    # FINAL SIGNAL GUARD
+    # =========================================================
 
     if signal == "HOLD" and not FORCE_SIGNAL_MODE:
-        LOGGER.info("No trade signal, stopping pipeline.")
+
+        LOGGER.info(
+            "No trade signal, stopping pipeline."
+        )
+
         return
 
     if not check_risk(signal):
-        LOGGER.info("Risk check failed, stopping pipeline.")
+
+        LOGGER.info(
+            "Risk check failed, stopping pipeline."
+        )
+
         return
+
+    # =========================================================
+    # TRADE EXECUTOR
+    # =========================================================
 
     executor = TradeExecutor()
     risk = RiskManager()
 
-    current_open_trades = executor.count_open_positions()
-    if not risk.can_open_new_trade(current_open_trades):
-        LOGGER.info("Too many open trades: %s", current_open_trades)
+    current_open_trades = (
+        executor.count_open_positions()
+    )
+
+    if not risk.can_open_new_trade(
+        current_open_trades
+    ):
+
+        LOGGER.info(
+            "Too many open trades: %s",
+            current_open_trades,
+        )
+
         return "Too many open trades"
 
     if executor.has_open_position(symbol):
-        LOGGER.info("Existing open position for %s, skipping new order.", symbol)
+
+        LOGGER.info(
+            "Existing open position for %s, "
+            "skipping new order.",
+            symbol,
+        )
+
         return
 
-    account_info = connector.get_account_info()
-    balance = account_info.get("balance") or risk.account_balance
-    LOGGER.info("Account balance: %s", balance)
+    # =========================================================
+    # ACCOUNT / DAILY RISK
+    # =========================================================
 
-    if not risk.check_daily_drawdown(balance):
-        LOGGER.warning("Daily loss limit reached, stopping trading for today.")
+    account_info = connector.get_account_info()
+
+    balance = (
+        account_info.get("balance")
+        or risk.account_balance
+    )
+
+    LOGGER.info(
+        "Account balance: %s",
+        balance,
+    )
+
+    if not risk.check_daily_drawdown(
+        balance
+    ):
+
+        LOGGER.warning(
+            "Daily loss limit reached, "
+            "stopping trading for today."
+        )
+
         return "Daily loss limit reached"
 
-    reference_balance = float(getattr(risk, "account_balance", balance) or balance)
-    daily_drawdown_pct = ((float(balance) - reference_balance) / reference_balance * 100.0) if reference_balance else 0.0
+    reference_balance = float(
+        getattr(
+            risk,
+            "account_balance",
+            balance,
+        )
+        or balance
+    )
+
+    daily_drawdown_pct = (
+        (
+            float(balance)
+            - reference_balance
+        )
+        / reference_balance
+        * 100.0
+        if reference_balance
+        else 0.0
+    )
+
+    # =========================================================
+    # CAPITAL MANAGEMENT
+    # =========================================================
+
     capital_manager = CapitalManager()
+
     capital_state = capital_manager.evaluate(
-        base_risk_percent=float(portfolio_result["dynamic_risk"]),
-        market_regime=str(market_regime.get("regime", "UNKNOWN")),
-        volatility_score=float(market_regime.get("volatility_score", 0.5) or 0.5),
+        base_risk_percent=float(
+            portfolio_result["dynamic_risk"]
+        ),
+        market_regime=str(
+            market_regime.get(
+                "regime",
+                "UNKNOWN",
+            )
+        ),
+        volatility_score=float(
+            market_regime.get(
+                "volatility_score",
+                0.5,
+            )
+            or 0.5
+        ),
         daily_drawdown_pct=daily_drawdown_pct,
         weekly_drawdown_pct=daily_drawdown_pct,
         floating_drawdown_pct=daily_drawdown_pct,
     )
-    risk.risk_per_trade = capital_state["allocated_risk_percent"] / 100.0
-    risk.risk_per_trade *= float(adaptive_ai_state.get("risk_multiplier", 1.0))
-    LOGGER.info(
-        "[CAPITAL] survival=%s allocated_risk=%.2f%%",
-        capital_state["survival_mode"],
-        capital_state["allocated_risk_percent"],
-    )
-    LOGGER.info("[ADAPTIVE AI] risk multiplier=%.2f", float(adaptive_ai_state.get("risk_multiplier", 1.0)))
-    lot = risk.calculate_lot_size(balance, risk.default_stop_loss_pips)
-    LOGGER.info("Calculated lot size: %s", lot)
 
-    success, ticket = executor.open_market_order(symbol, signal, lot)
+    risk.risk_per_trade = (
+        capital_state[
+            "allocated_risk_percent"
+        ]
+        / 100.0
+    )
+
+    risk.risk_per_trade *= float(
+        adaptive_ai_state.get(
+            "risk_multiplier",
+            1.0,
+        )
+    )
+
+    LOGGER.info(
+        "[CAPITAL] survival=%s "
+        "allocated_risk=%.2f%%",
+        capital_state["survival_mode"],
+        capital_state[
+            "allocated_risk_percent"
+        ],
+    )
+
+    LOGGER.info(
+        "[ADAPTIVE AI] risk multiplier=%.2f",
+        float(
+            adaptive_ai_state.get(
+                "risk_multiplier",
+                1.0,
+            )
+        ),
+    )
+
+    # =========================================================
+    # DYNAMIC POSITION SIZING
+    # =========================================================
+
+    entry_price = (
+        float(candles["close"].iloc[-1])
+        if not candles.empty
+        else 0.0
+    )
+
+    if entry_price <= 0:
+
+        LOGGER.error(
+            "[RISK] Entry price không hợp lệ."
+        )
+
+        return "Invalid entry price"
+
+    if signal not in {"BUY", "SELL"}:
+
+        LOGGER.info(
+            "[RISK] Signal không phải "
+            "BUY/SELL -> không tính lot."
+        )
+
+        return
+
+    signal_sl = float(signal_sl)
+    signal_tp = float(signal_tp)
+
+    if signal_sl <= 0 or signal_tp <= 0:
+
+        LOGGER.error(
+            "[RISK] SL/TP không hợp lệ: "
+            "entry=%.5f sl=%.5f tp=%.5f",
+            entry_price,
+            signal_sl,
+            signal_tp,
+        )
+
+        return "Invalid SL/TP"
+
+    sl_distance = abs(
+        entry_price - signal_sl
+    )
+
+    if sl_distance <= 0:
+
+        LOGGER.error(
+            "[RISK] Khoảng cách SL không hợp lệ: "
+            "entry=%.5f sl=%.5f",
+            entry_price,
+            signal_sl,
+        )
+
+        return "Invalid SL distance"
+
+    lot = risk.calculate_lot_size_from_price_distance(
+        balance=float(balance),
+        entry_price=entry_price,
+        stop_loss_price=signal_sl,
+        symbol=symbol,
+    )
+
+    LOGGER.info(
+        "[RISK] Dynamic position sizing: "
+        "balance=%.2f entry=%.5f "
+        "sl=%.5f distance=%.5f lot=%.2f",
+        float(balance),
+        entry_price,
+        signal_sl,
+        sl_distance,
+        lot,
+    )
+
+    if lot <= 0:
+
+        LOGGER.error(
+            "[RISK] Lot size không hợp lệ: %s",
+            lot,
+        )
+
+        return "Invalid lot size"
+
+    # =========================================================
+    # FINAL SL / TP VALIDATION
+    # =========================================================
+
+    if signal == "BUY":
+
+        if not (
+            signal_sl
+            < entry_price
+            < signal_tp
+        ):
+
+            LOGGER.error(
+                "[EXECUTION GUARD] "
+                "BUY levels invalid: "
+                "SL=%.5f Entry=%.5f TP=%.5f",
+                signal_sl,
+                entry_price,
+                signal_tp,
+            )
+
+            return "Invalid BUY SL/TP"
+
+    elif signal == "SELL":
+
+        if not (
+            signal_tp
+            < entry_price
+            < signal_sl
+        ):
+
+            LOGGER.error(
+                "[EXECUTION GUARD] "
+                "SELL levels invalid: "
+                "SL=%.5f Entry=%.5f TP=%.5f",
+                signal_sl,
+                entry_price,
+                signal_tp,
+            )
+
+            return "Invalid SELL SL/TP"
+
+    LOGGER.info(
+        "[FINAL TRADE LEVELS] "
+        "signal=%s entry=%.5f "
+        "sl=%.5f tp=%.5f lot=%.2f",
+        signal,
+        entry_price,
+        signal_sl,
+        signal_tp,
+        lot,
+    )
+
+    # =========================================================
+    # FINAL SL/TP VALIDATION BEFORE EXECUTION
+    # =========================================================
+    if signal == "BUY":
+        if not (signal_sl < entry_price < signal_tp):
+            LOGGER.error(
+                "[EXECUTION GUARD] BUY levels invalid: "
+                "SL=%.5f Entry=%.5f TP=%.5f",
+                signal_sl,
+                entry_price,
+                signal_tp,
+            )
+            return "Invalid BUY SL/TP"
+
+    elif signal == "SELL":
+        if not (signal_tp < entry_price < signal_sl):
+            LOGGER.error(
+                "[EXECUTION GUARD] SELL levels invalid: "
+                "SL=%.5f Entry=%.5f TP=%.5f",
+                signal_sl,
+                entry_price,
+                signal_tp,
+            )
+            return "Invalid SELL SL/TP"
+
+    LOGGER.info(
+        "[FINAL TRADE LEVELS] "
+        "signal=%s entry=%.5f sl=%.5f tp=%.5f lot=%.2f",
+        signal,
+        entry_price,
+        signal_sl,
+        signal_tp,
+        lot,
+    )
+
+    # =========================================================
+    # EXECUTION
+    # =========================================================
+    success, ticket = executor.open_market_order(
+        symbol=symbol,
+        signal=signal,
+        lot=lot,
+        stop_loss=signal_sl,
+        take_profit=signal_tp,
+    )
+
+    if not success:
+        LOGGER.warning("Order was not placed.")
+        return
+
+    LOGGER.info(
+        "ORDER SENT SUCCESS: ticket=%s signal=%s lot=%.2f",
+        ticket,
+        signal,
+    )
+
     if not success:
         LOGGER.warning("Order was not placed.")
         return
