@@ -1649,3 +1649,1201 @@ Trade Executor:
 Production Trading:
 
 🟡 NOT YET CERTIFIED
+
+============================================================
+CHECKPOINT — TELEGRAM LIVE DEMO VALIDATION
+============================================================
+
+Date:
+2026-08-11
+
+Branch:
+final-production-finish-20260810
+
+Checkpoint:
+TELEGRAM LIVE DEMO VALIDATION — PASS
+
+Git Safety Tag:
+TELEGRAM-VALIDATION-BEFORE-FIX-20260811
+
+------------------------------------------------------------
+VALIDATION RESULT
+------------------------------------------------------------
+
+Status:
+PASS
+
+Validation Command:
+
+python -m backend.validation.live_demo_validation --notify
+
+------------------------------------------------------------
+RUNTIME VALIDATION
+------------------------------------------------------------
+
+Settings:
+PASS
+
+Runtime Environment:
+PASS
+
+MT5 Auto Login:
+PASS
+
+MT5 Connection:
+PASS
+
+MT5 Trading Permission:
+PASS
+
+Market Session:
+PASS
+
+Symbol:
+EURUSDm
+
+Symbol Validation:
+PASS
+
+Market Data:
+PASS
+
+Tick Data:
+PASS
+
+Telegram Notification:
+PASS
+
+------------------------------------------------------------
+MT5 ACCOUNT
+------------------------------------------------------------
+
+Account:
+416081987
+
+Balance:
+10.90 USD
+
+Equity:
+10.90 USD
+
+------------------------------------------------------------
+SIGNAL VALIDATION
+------------------------------------------------------------
+
+Signal:
+HOLD
+
+Signal Status:
+VALID — NO TRADE SIGNAL
+
+The HOLD state is treated as a valid non-trading state.
+
+Q-Bot-FX does not force order execution when the
+signal generator returns HOLD.
+
+------------------------------------------------------------
+ORDER EXECUTION
+------------------------------------------------------------
+
+Order Sent:
+NO
+
+Order Ticket:
+N/A
+
+Position Verification:
+NOT EXECUTED
+
+Reason:
+Signal generator returned HOLD.
+
+No demo order was submitted during this validation.
+
+------------------------------------------------------------
+TELEGRAM VALIDATION
+------------------------------------------------------------
+
+Telegram Live Demo Validation Report:
+PASS
+
+Telegram HTML formatting:
+PASS
+
+Telegram delivery:
+PASS
+
+Dashboard sections verified:
+
+- SYSTEM
+- ACCOUNT
+- SIGNAL
+- ORDER
+- WARNINGS
+- VALIDATION STATUS
+
+------------------------------------------------------------
+CURRENT SYSTEM STATE
+------------------------------------------------------------
+
+Q-BOT-FX can currently:
+
+- Start runtime successfully.
+- Connect to MT5.
+- Authenticate through MT5 Auto Login.
+- Read account information.
+- Confirm trading permission.
+- Confirm market session.
+- Validate broker symbol availability.
+- Read market/tick data.
+- Generate a trading signal.
+- Correctly remain in HOLD state when no valid signal exists.
+- Send validation reports to Telegram.
+- Report validation status to the monitoring channel.
+
+------------------------------------------------------------
+IMPORTANT SAFETY STATE
+------------------------------------------------------------
+
+No real/demo market order was forced during this checkpoint.
+
+The system has NOT yet certified:
+
+- BUY execution
+- SELL execution
+- mt5.order_send() success
+- Order ticket retrieval
+- Position verification after execution
+- SL/TP execution verification
+- Position monitoring after execution
+- Emergency/recovery behavior
+- Long-running autonomous trading
+
+------------------------------------------------------------
+CHECKPOINT DECISION
+------------------------------------------------------------
+
+TELEGRAM LIVE DEMO VALIDATION:
+
+PASS
+
+Telegram monitoring:
+PASS
+
+MT5 runtime connectivity:
+PASS
+
+Trading permission:
+PASS
+
+Signal safety:
+PASS
+
+No-signal handling:
+PASS
+
+Order safety:
+PASS
+
+------------------------------------------------------------
+NEXT VALIDATION TARGET
+------------------------------------------------------------
+
+Controlled BUY/SELL Demo Execution Validation.
+
+Required sequence:
+
+Signal BUY/SELL
+        ↓
+Risk validation
+        ↓
+SL/TP validation
+        ↓
+Volume validation
+        ↓
+TradeExecutor
+        ↓
+mt5.order_send()
+        ↓
+Ticket retrieval
+        ↓
+Position verification
+        ↓
+SL/TP verification
+        ↓
+Telegram trade report
+
+The next execution test must remain controlled on the
+Exness demo account.
+
+No production/live trading certification is granted by
+this checkpoint.
+
+------------------------------------------------------------
+CHECKPOINT STATUS
+------------------------------------------------------------
+
+🟢 TELEGRAM LIVE DEMO VALIDATION — PASS
+
+------------------------------------------------------------
+
+---
+
+# PROJECT STATUS UPDATE
+## Q-Bot-FX — Session Update
+### 14/08/2026 — 20:08 (UTC+7)
+
+> Đây là bản cập nhật trạng thái sau khi hoàn thành và kiểm thử chuỗi
+> `Structure Detector → Confluence Engine`.
+>
+> PROJECT_STATUS.md tiếp tục là tài liệu theo dõi trạng thái hiện tại của dự án.
+> Không đánh dấu hoàn thành module nếu chưa có Compile PASS và Runtime/Test PASS.
+
+---
+
+## 1. TRẠNG THÁI TỔNG QUAN
+
+### Analysis Pipeline hiện tại
+
+Market Data
+↓
+Indicator Layer
+↓
+Momentum Analysis
+↓
+Volatility / Volume Analysis
+↓
+Market Structure Analysis
+↓
+Structure Alignment
+↓
+Confluence Engine
+↓
+Strategy Engine
+↓
+Risk Management
+↓
+Execution
+
+### Trạng thái
+
+| Thành phần | Trạng thái |
+|---|---|
+| Project Skeleton | PASS |
+| MT5 Connector | PASS |
+| Market Data Layer | PASS |
+| Trend Engine | PASS |
+| Structure Detector | PASS |
+| Confluence Engine — Part 1 | PASS |
+| Confluence Engine — Part 2 | PASS |
+| Confluence Engine — Part 3 | PASS |
+| Confluence Engine — Part 4 | PASS |
+| Confluence Engine — Part 5 | PASS |
+| Final Confluence Calculation | PASS |
+| Strategy Engine | CHƯA TRIỂN KHAI TIẾP |
+| Risk Integration | CHƯA HOÀN THIỆN |
+| Execution Integration | CHƯA HOÀN THIỆN |
+| Live Trading | CHƯA ĐƯỢC PHÉP |
+
+---
+
+# 2. FILE ĐÃ TẠO / CẬP NHẬT
+
+## 2.1. `backend/analysis/trend_engine.py`
+
+Đã hoàn thành Trend Engine và kiểm thử.
+
+### Kiểm thử
+
+```text
+python -m py_compile backend\analysis\trend_engine.py
+
+                    MARKET DATA
+                         │
+                         ▼
+                ┌─────────────────┐
+                │   TREND ENGINE  │
+                └────────┬────────┘
+                         │
+          ┌──────────────┼──────────────┐
+          ▼              ▼              ▼
+     MOMENTUM       VOLATILITY      STRUCTURE
+      PART 2          PART 3          PART 4
+          │              │              │
+          └──────────────┼──────────────┘
+                         ▼
+                ┌─────────────────┐
+                │ FINAL CONFLUENCE│
+                │     PART 5      │
+                └────────┬────────┘
+                         │
+                         ▼
+                  STRATEGY ENGINE
+
+============================================================
+Q-BOT-FX — PROJECT STATUS UPDATE
+============================================================
+
+Date:
+2026-08-15
+
+Time:
+20:42 (GMT+7)
+
+Phase:
+PHASE 1 — FINAL RUNTIME COMPLETION
+
+Current Status:
+CORE TRADING MODULES COMPLETED
+SYSTEM INTEGRATION IN PROGRESS
+
+
+============================================================
+1. CURRENT DEVELOPMENT POSITION
+============================================================
+
+Q-Bot-FX đã hoàn thành phần lớn các module
+cốt lõi của Trading Core.
+
+Hiện tại hệ thống đã có:
+
+MT5
+ ↓
+Market Data
+ ↓
+Analysis
+ ↓
+Confluence
+ ↓
+Strategy
+ ↓
+Risk
+ ↓
+Execution
+ ↓
+Order Verification
+ ↓
+Position Management
+
+Các module chính đã được xây dựng và kiểm thử
+độc lập.
+
+Tuy nhiên hệ thống CHƯA được tuyên bố
+Production Ready.
+
+Lý do:
+
+Các module cần được kiểm thử tiếp trong
+một pipeline runtime hoàn chỉnh.
+
+
+============================================================
+2. OVERALL PROGRESS
+============================================================
+
+Estimated Phase 1 Progress:
+
+≈ 80%
+
+Progress meaning:
+
+- Core modules: gần hoàn tất
+- Individual module validation: PASS
+- Runtime integration: đang hoàn thiện
+- Continuous trading: chưa hoàn tất
+- Recovery: chưa hoàn tất
+- Full production validation: chưa hoàn tất
+
+Therefore:
+
+Overall:
+IN PROGRESS
+
+Production:
+NOT READY
+
+
+============================================================
+3. COMPLETED MODULES
+============================================================
+
+------------------------------------------------------------
+ANALYSIS
+------------------------------------------------------------
+
+File:
+
+backend/analysis/confluence_engine.py
+
+Status:
+
+PASS
+
+Completed:
+
+✓ Foundation
+✓ Momentum
+✓ Volatility / Volume
+✓ Structure Alignment
+✓ Final Confluence
+
+Validation:
+
+Compile:
+PASS
+
+Functional:
+PASS
+
+
+------------------------------------------------------------
+STRATEGY
+------------------------------------------------------------
+
+File:
+
+backend/strategy/strategy_engine.py
+
+Status:
+
+PASS
+
+Purpose:
+
+Chuyển kết quả phân tích thành:
+
+BUY
+SELL
+HOLD
+
+Validation:
+
+BUY:
+PASS
+
+SELL:
+PASS
+
+HOLD:
+PASS
+
+
+------------------------------------------------------------
+RISK
+------------------------------------------------------------
+
+File:
+
+backend/risk/risk_manager.py
+
+Status:
+
+PASS
+
+Completed:
+
+✓ RiskConfig
+✓ RiskResult
+✓ Risk percentage
+✓ Risk limit
+✓ Lot sizing
+✓ Minimum lot
+✓ Maximum lot
+✓ Stop Loss
+✓ Take Profit
+✓ Reward / Risk
+✓ Risk approval
+✓ Risk rejection
+
+Validation:
+
+Compile:
+PASS
+
+Runtime function:
+PASS
+
+
+------------------------------------------------------------
+EXECUTION
+------------------------------------------------------------
+
+File:
+
+backend/execution/trade_executor.py
+
+Status:
+
+PASS — CORE EXECUTION MODULE
+
+Completed:
+
+✓ Configuration
+✓ Signal validation
+✓ Volume normalization
+✓ Broker volume validation
+✓ SL validation
+✓ TP validation
+✓ Order type
+✓ Order request
+✓ Order sending
+✓ Order verification
+✓ Position management
+✓ Public execution flow
+✓ Dry-run protection
+
+Validation:
+
+Compile:
+PASS
+
+
+============================================================
+4. TRADE EXECUTOR PART STATUS
+============================================================
+
+PART 1
+Foundation / Configuration
+
+PASS
+
+
+PART 2
+Validation / Volume / SL / TP
+
+PASS
+
+
+PART 3
+Order Preparation
+
+PASS
+
+
+PART 4
+Order Request
+
+PASS
+
+
+PART 5
+Order Sending
+
+PASS
+
+
+PART 6
+Order Verification
+
+PASS
+
+
+PART 7
+Position Management
+
+PASS
+
+
+PART 8
+Public Execution Flow
+
+PASS
+
+
+============================================================
+5. VERIFIED EXECUTION TESTS
+============================================================
+
+Volume:
+
+0.037
+
+Normalized:
+
+0.04
+
+Result:
+PASS
+
+
+BUY:
+
+Price:
+1.1000
+
+SL:
+1.0990
+
+TP:
+1.1020
+
+Result:
+VALID
+
+
+SELL:
+
+Price:
+1.1000
+
+SL:
+1.1010
+
+TP:
+1.0980
+
+Result:
+VALID
+
+
+Invalid BUY:
+
+Price:
+1.1000
+
+SL:
+1.1020
+
+TP:
+1.0990
+
+Result:
+INVALID
+
+Expected behavior:
+PASS
+
+
+Order type:
+
+BUY:
+0
+
+SELL:
+1
+
+HOLD:
+None
+
+Result:
+PASS
+
+
+Order request:
+
+EURUSD
+BUY
+0.01
+Price:
+1.1000
+SL:
+1.0990
+TP:
+1.1020
+
+Result:
+Request generated successfully
+
+PASS
+
+
+Order verification:
+
+Invalid ticket:
+False
+
+Result:
+PASS
+
+
+Position:
+
+EURUSD
+
+Current open position:
+False
+
+Current position count:
+0
+
+Result:
+PASS
+
+
+Dry-run:
+
+live_trading_enabled:
+False
+
+Execution result:
+
+(False, None)
+
+Result:
+PASS
+
+No live order intentionally sent.
+
+
+============================================================
+6. CURRENT ARCHITECTURE
+============================================================
+
+                    Q-BOT-FX
+
+                       │
+
+                       ▼
+
+                MARKET DATA
+
+                       │
+
+                       ▼
+
+              ANALYSIS LAYER
+
+          ┌────────────┼────────────┐
+          │            │            │
+          ▼            ▼            ▼
+      Momentum     Volatility    Structure
+          │            │            │
+          └────────────┼────────────┘
+                       │
+                       ▼
+
+              CONFLUENCE ENGINE
+
+                       │
+
+                       ▼
+
+               STRATEGY ENGINE
+
+                       │
+
+                       ▼
+
+                 RISK MANAGER
+
+                       │
+
+                       ▼
+
+               TRADE EXECUTOR
+
+                       │
+
+                       ▼
+
+                     MT5
+
+                       │
+
+                       ▼
+
+                    MARKET
+
+
+============================================================
+7. FILE PURPOSE SUMMARY
+============================================================
+
+confluence_engine.py
+
+Vai trò:
+
+Tổng hợp nhiều tín hiệu phân tích.
+
+Không đặt lệnh.
+
+
+strategy_engine.py
+
+Vai trò:
+
+Ra quyết định chiến lược:
+
+BUY
+SELL
+HOLD
+
+Không đặt lệnh.
+
+
+risk_manager.py
+
+Vai trò:
+
+Kiểm soát vốn và khối lượng.
+
+Tính:
+
+Risk
+Lot
+SL
+TP
+
+Không đặt lệnh.
+
+
+trade_executor.py
+
+Vai trò:
+
+Thực hiện lệnh thông qua MT5.
+
+Có nhiệm vụ:
+
+Prepare
+Send
+Verify
+Position Management
+
+
+signal_pipeline.py
+
+Vai trò tiếp theo cần kiểm tra:
+
+Kết nối toàn bộ các module.
+
+Đây sẽ là điểm tích hợp quan trọng
+của bước phát triển tiếp theo.
+
+
+============================================================
+8. FILE STATUS
+============================================================
+
+MODIFIED:
+
+backend/analysis/confluence_engine.py
+
+backend/risk/risk_manager.py
+
+backend/execution/trade_executor.py
+
+CHANGELOG.md
+
+PROJECT_STATUS.md
+
+
+CREATED / ADDED:
+
+backend/strategy/strategy_engine.py
+
+
+RETAINED:
+
+backend/strategy/demo_strategy.py
+
+Mục đích:
+
+Demo / legacy strategy.
+
+Không phải Strategy Engine chính.
+
+
+============================================================
+9. TEST STATUS
+============================================================
+
+Compile:
+
+PASS
+
+Import:
+
+PASS
+
+Confluence:
+
+PASS
+
+Momentum:
+
+PASS
+
+Volatility:
+
+PASS
+
+Structure:
+
+PASS
+
+Strategy:
+
+PASS
+
+Risk:
+
+PASS
+
+Execution:
+
+PASS
+
+Order Request:
+
+PASS
+
+Order Verification:
+
+PASS
+
+Position Management:
+
+PASS
+
+Dry-run:
+
+PASS
+
+
+============================================================
+10. IMPORTANT SAFETY STATUS
+============================================================
+
+LIVE TRADING:
+
+DISABLED
+
+Current mode:
+
+DRY-RUN
+
+Không được bật Live Trading trong giai đoạn
+chưa hoàn tất Full Runtime Validation.
+
+
+============================================================
+11. REMAINING WORK
+============================================================
+
+PHASE 1 còn các nhóm công việc chính:
+
+------------------------------------------------------------
+A. FULL PIPELINE
+------------------------------------------------------------
+
+Market Data
+ ↓
+Analysis
+ ↓
+Confluence
+ ↓
+Strategy
+ ↓
+Risk
+ ↓
+Execution
+
+Cần kiểm tra toàn bộ luồng bằng dữ liệu thực.
+
+
+------------------------------------------------------------
+B. TRADING LOOP
+------------------------------------------------------------
+
+Cần hoàn thiện:
+
+✓ New candle detection
+✓ Duplicate order protection
+✓ Existing position handling
+✓ Invalid data handling
+✓ Market state handling
+✓ Exception handling
+✓ Graceful shutdown
+
+
+------------------------------------------------------------
+C. MT5 RECOVERY
+------------------------------------------------------------
+
+Cần kiểm tra:
+
+- MT5 disconnect
+- Reconnect
+- Symbol unavailable
+- Tick unavailable
+- Data unavailable
+- Execution failure
+- Recovery
+
+
+------------------------------------------------------------
+D. TELEGRAM
+------------------------------------------------------------
+
+Cần xác nhận runtime:
+
+- Startup notification
+- Signal notification
+- Order notification
+- SL notification
+- TP notification
+- Error notification
+- Disconnect notification
+- Reconnect notification
+
+
+------------------------------------------------------------
+E. FULL RUNTIME TEST
+------------------------------------------------------------
+
+Cần chạy:
+
+MT5
+ ↓
+Market Data
+ ↓
+Analysis
+ ↓
+Confluence
+ ↓
+Strategy
+ ↓
+Risk
+ ↓
+Execution
+ ↓
+Verification
+ ↓
+Monitoring
+ ↓
+Loop
+
+
+------------------------------------------------------------
+F. FINAL DEMO VALIDATION
+------------------------------------------------------------
+
+Chỉ thực hiện sau khi:
+
+- Pipeline PASS
+- Risk PASS
+- Execution PASS
+- Recovery PASS
+- Loop PASS
+- Telegram PASS
+- Safety PASS
+
+Sau đó mới thực hiện controlled demo-order
+validation.
+
+
+============================================================
+12. NEXT DEVELOPMENT TARGET
+============================================================
+
+NEXT TARGET:
+
+FULL SIGNAL PIPELINE INTEGRATION
+
+File trọng tâm:
+
+backend/core/signal_pipeline.py
+
+Mục tiêu:
+
+Kết nối:
+
+Confluence
+    ↓
+Strategy
+    ↓
+Risk
+    ↓
+TradeExecutor
+
+thành một luồng runtime hoàn chỉnh.
+
+
+============================================================
+13. GIT CHECKPOINT
+============================================================
+
+Current session must be preserved.
+
+Actions:
+
+1. CHANGELOG.md updated
+2. PROJECT_STATUS.md updated
+3. Create new branch
+4. Preserve all changes
+5. Compile
+6. Review
+7. Commit
+8. Continue development from new branch
+
+No current work should be lost.
+
+
+============================================================
+14. PHASE 1 COMPLETION ESTIMATE
+============================================================
+
+Current:
+
+≈ 80%
+
+Remaining:
+
+≈ 20%
+
+The remaining percentage is mainly:
+
+- Integration
+- Continuous loop
+- Recovery
+- Telegram runtime
+- Full end-to-end testing
+- Final demo validation
+- Production stability validation
+
+Important:
+
+80% DOES NOT mean the bot is ready for
+real-money trading.
+
+The project remains:
+
+NOT PRODUCTION READY
+
+
+============================================================
+15. CURRENT DEVELOPMENT RULE
+============================================================
+
+Do NOT:
+
+- Enable live trading
+- Skip risk validation
+- Skip order verification
+- Skip runtime tests
+- Claim PASS without evidence
+- Modify multiple unrelated modules simultaneously
+
+Continue:
+
+One integration block at a time.
+
+Each block:
+
+Implement
+ ↓
+Compile
+ ↓
+Test
+ ↓
+Verify
+ ↓
+Document
+ ↓
+Commit
+
+
+============================================================
+END OF PROJECT STATUS UPDATE
+============================================================                

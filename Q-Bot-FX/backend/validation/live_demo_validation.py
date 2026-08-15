@@ -281,31 +281,130 @@ def _verify_order_position(result: LiveDemoValidationResult, ticket: int) -> boo
     return True
 
 
-def _build_telegram_message(result: LiveDemoValidationResult, settings: Settings) -> str:
-    lines = ["Q-BOT-FX Live Demo Validation Report"]
-    lines.append(f"Project root: {PROJECT_ROOT}")
-    lines.append(f"MT5 connected: {result.mt5_connected}")
-    lines.append(f"Trade allowed: {result.trade_allowed}")
-    lines.append(f"Account: {result.account_login or 'UNKNOWN'}")
+def _build_telegram_message(
+    result: LiveDemoValidationResult,
+    settings: Settings,
+) -> str:
+    """Build a compact HTML-formatted Telegram validation report."""
+
+    status_icon = "🟢" if result.success else "🔴"
+
+    signal = result.signal or "HOLD"
+
+    if signal == "BUY":
+        signal_icon = "🟢"
+    elif signal == "SELL":
+        signal_icon = "🔴"
+    else:
+        signal_icon = "⚪"
+
+    mt5_icon = "🟢" if result.mt5_connected else "🔴"
+    trading_icon = "🟢" if result.trade_allowed else "🔴"
+    market_icon = "🟢" if result.market_open else "🔴"
+
+    lines = [
+        f"<b>{status_icon} Q-BOT-FX LIVE DEMO VALIDATION</b>",
+        "",
+        "━━━━━━━━━━━━━━━━━━━━",
+        "<b>📡 SYSTEM</b>",
+        f"{mt5_icon} MT5: "
+        f"<b>{'CONNECTED' if result.mt5_connected else 'DISCONNECTED'}</b>",
+        f"{trading_icon} Trading: "
+        f"<b>{'ALLOWED' if result.trade_allowed else 'DISABLED'}</b>",
+        f"{market_icon} Market: "
+        f"<b>{'OPEN' if result.market_open else 'CLOSED'}</b>",
+        "",
+        "━━━━━━━━━━━━━━━━━━━━",
+        "<b>💰 ACCOUNT</b>",
+        f"👤 Account: <code>{result.account_login or 'UNKNOWN'}</code>",
+    ]
+
     if result.account_balance is not None:
-        lines.append(f"Balance: {result.account_balance:.2f}")
+        lines.append(
+            f"💵 Balance: <b>{result.account_balance:.2f} USD</b>"
+        )
+
     if result.account_equity is not None:
-        lines.append(f"Equity: {result.account_equity:.2f}")
-    lines.append(f"Symbol: {result.symbol}")
-    lines.append(f"Signal: {result.signal or 'HOLD'}")
-    if result.signal in {"BUY", "SELL"}:
-        lines.append(f"SL: {result.sl:.5f}")
-        lines.append(f"TP: {result.tp:.5f}")
-    lines.append(f"Order sent: {result.order_sent}")
+        lines.append(
+            f"📊 Equity: <b>{result.account_equity:.2f} USD</b>"
+        )
+
+    lines.extend(
+        [
+            "",
+            "━━━━━━━━━━━━━━━━━━━━",
+            "<b>📈 SIGNAL</b>",
+            f"Symbol: <code>{result.symbol or 'UNKNOWN'}</code>",
+            f"Signal: {signal_icon} <b>{signal}</b>",
+        ]
+    )
+
+    if signal in {"BUY", "SELL"}:
+        if result.volume is not None:
+            lines.append(f"📦 Volume: <b>{result.volume:.2f}</b>")
+
+        if result.tick_bid is not None:
+            lines.append(f"🔵 Bid: <code>{result.tick_bid:.5f}</code>")
+
+        if result.tick_ask is not None:
+            lines.append(f"🔴 Ask: <code>{result.tick_ask:.5f}</code>")
+
+        if result.sl is not None:
+            lines.append(f"🛑 SL: <code>{result.sl:.5f}</code>")
+
+        if result.tp is not None:
+            lines.append(f"🎯 TP: <code>{result.tp:.5f}</code>")
+
+    lines.extend(
+        [
+            "",
+            "━━━━━━━━━━━━━━━━━━━━",
+            "<b>⚡ ORDER</b>",
+            f"Order Sent: "
+            f"<b>{'YES' if result.order_sent else 'NO'}</b>",
+        ]
+    )
+
     if result.order_ticket is not None:
-        lines.append(f"Order ticket: {result.order_ticket}")
+        lines.append(
+            f"🎫 Ticket: <code>{result.order_ticket}</code>"
+        )
+
+    if result.position_verified:
+        lines.append("✅ Position: <b>VERIFIED</b>")
 
     if result.errors:
-        lines.append("Errors:")
-        lines.extend(f"- {error}" for error in result.errors)
+        lines.extend(
+            [
+                "",
+                "━━━━━━━━━━━━━━━━━━━━",
+                "<b>🔴 ERRORS</b>",
+            ]
+        )
+
+        for error in result.errors:
+            lines.append(f"• {error}")
+
     if result.warnings:
-        lines.append("Warnings:")
-        lines.extend(f"- {warning}" for warning in result.warnings)
+        lines.extend(
+            [
+                "",
+                "━━━━━━━━━━━━━━━━━━━━",
+                "<b>🟡 WARNINGS</b>",
+            ]
+        )
+
+        for warning in result.warnings:
+            lines.append(f"• {warning}")
+
+    lines.extend(
+        [
+            "",
+            "━━━━━━━━━━━━━━━━━━━━",
+            f"<b>{status_icon} VALIDATION "
+            f"{'PASS' if result.success else 'FAILED'}</b>",
+        ]
+    )
 
     return "\n".join(lines)
 
