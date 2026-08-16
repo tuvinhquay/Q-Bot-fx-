@@ -53,14 +53,21 @@ class Settings:
         ]
 
         # Timeframes
+        self.TIMEFRAME_H1 = 1
+        self.TIMEFRAME_M15 = 15
+        self.TIMEFRAME_M5 = 5
+
+        # Legacy / higher timeframes
         self.TIMEFRAME_D1 = "D1"
         self.TIMEFRAME_H4 = "H4"
-        self.TIMEFRAME_H1 = "H1"
 
         # Candle history
+        self.CANDLES_H1 = 300
+        self.CANDLES_M15 = 300
+        self.CANDLES_M5 = 300
+
         self.CANDLES_D1 = 120
         self.CANDLES_H4 = 200
-        self.CANDLES_H1 = 300
 
         # Scheduler
         self.TRADE_INTERVAL_MINUTES = 5
